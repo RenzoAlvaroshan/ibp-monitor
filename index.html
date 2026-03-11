@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IBP Leave Monitor</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0F1923; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    const DEFAULT_TEAM = [
+      { id: 1, name: "Bu Tamie", leaves: [{ id: 1, start: "2026-03-27", end: "2026-03-31", type: "cuti" }] },
+      { id: 2, name: "Pak Ardi", leaves: [{ id: 1, start: "2026-03-30", end: "2026-05-13", type: "cubes", note: "Masuk 18 Mei" }] },
+      { id: 3, name: "Pak Ian", leaves: [{ id: 1, start: "2026-03-16", end: "2026-04-24", type: "cuti" }] },
+      { id: 4, name: "Bu Widhia", leaves: [{ id: 1, start: "2026-03-16", end: "2026-03-27", type: "cuti" }] },
+      { id: 5, name: "Bima", leaves: [{ id: 1, start: "2026-03-11", end: "2026-03-13", type: "cuti" }] },
+      { id: 6, name: "Renzo", leaves: [{ id: 1, start: "2026-03-04", end: "2026-03-13", type: "cuti" }] },
+      { id: 7, name: "Sadad", leaves: [{ id: 1, start: "2026-03-16", end: "2026-03-17", type: "cuti" }, { id: 2, start: "2026-03-25", end: "2026-03-27", type: "cuti" }] },
+      { id: 8, name: "Marwan", leaves: [{ id: 1, start: "2026-03-09", end: "2026-03-13", type: "cuti" }] },
+      { id: 9, name: "Bintang", leaves: [{ id: 1, start: "2026-03-27", end: "2026-04-01", type: "cuti" }] },
+      { id: 10, name: "Shifa", leaves: [{ id: 1, start: "2026-03-27", end: "2026-03-31", type: "cuti" }] },
+    ];
+    const HOLIDAYS = [
+      { date: "2026-01-01", name: "Tahun Baru 2026 Masehi" },
+      { date: "2026-01-16", name: "Isra Mi'raj Nabi Muhammad SAW" },
+      { date: "2026-02-16", name: "Tahun Baru Imlek 2577 Kongzili" },
+      { date: "2026-02-17", name: "Tahun Baru Imlek 2577 Kongzili" },
+      { date: "2026-03-18", name: "Hari Suci Nyepi" },
+      { date: "2026-03-19", name: "Hari Suci Nyepi (Cuti Bersama)" },
+      { date: "2026-03-20", name: "Cuti Bersama Idul Fitri" },
+      { date: "2026-03-21", name: "Hari Raya Idul Fitri 1447 H" },
+      { date: "2026-03-22", name: "Hari Raya Idul Fitri 1447 H" },
+      { date: "2026-03-23", name: "Cuti Bersama Idul Fitri" },
+      { date: "2026-03-24", name: "Cuti Bersama Idul Fitri" },
+      { date: "2026-04-03", name: "Wafat Yesus Kristus" },
+      { date: "2026-04-05", name: "Kebangkitan Yesus Kristus" },
+      { date: "2026-05-01", name: "Hari Buruh Internasional" },
+      { date: "2026-05-14", name: "Kenaikan Yesus Kristus" },
+      { date: "2026-05-15", name: "Kenaikan Yesus Kristus (Cuti Bersama)" },
+      { date: "2026-05-27", name: "Hari Raya Idul Adha 1447 H" },
+      { date: "2026-05-28", name: "Hari Raya Idul Adha (Cuti Bersama)" },
+      { date: "2026-05-31", name: "Hari Raya Waisak" },
+      { date: "2026-06-01", name: "Hari Lahir Pancasila" },
+      { date: "2026-06-16", name: "Tahun Baru Islam 1448 H" },
+      { date: "2026-08-17", name: "Proklamasi Kemerdekaan RI ke-81" },
+      { date: "2026-08-25", name: "Maulid Nabi Muhammad SAW" },
+      { date: "2026-12-24", name: "Kelahiran Yesus Kristus (Cuti Bersama)" },
+      { date: "2026-12-25", name: "Kelahiran Yesus Kristus" },
+    ];
+    const DEFAULT_WFA = ["2026-03-16","2026-03-17","2026-03-25","2026-03-26","2026-03-27"];
+
+    // ─── utils ───────────────────────────────────────────────
+    function parseDate(s) { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); }
+    function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+    function fmtShort(d) { return d.toLocaleDateString("id-ID",{day:"numeric",month:"short"}); }
+    function fmtFull(d) { return d.toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}); }
+    function isWeekend(d) { return d.getDay()===0||d.getDay()===6; }
+    function isOnLeave(person, ds) { return person.leaves.some(l=>ds>=l.start&&ds<=l.end); }
+    function getLeaveForDate(person, ds) { return person.leaves.find(l=>ds>=l.start&&ds<=l.end); }
+    function isHoliday(ds) { return HOLIDAYS.find(h=>h.date===ds); }
+    function getDaysInMonth(y,m) { return new Date(y,m+1,0).getDate(); }
+    function getMonthDates(y,m) { const n=getDaysInMonth(y,m),r=[]; for(let i=1;i<=n;i++) r.push(new Date(y,m,i)); return r; }
+    const MONTHS_ID=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    const DAYS_ID=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+
+    // ─── theme ───────────────────────────────────────────────
+    const T = {
+      bg:"#0F1923", card:"#1A2736", card2:"#1E2F42",
+      primary:"#F1FAEE", secondary:"#8FA3B8",
+      accent:"#E63946", teal:"#2EC4B6", amber:"#FFB703",
+      red:"#E63946", blue:"#457B9D", orange:"#FB8500",
+      success:"#2EC4B6",
+    };
+
+    // ─── storage ─────────────────────────────────────────────
+    const STORAGE_KEY = "ibp-leave-monitor-data";
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+      try {
+        const raw = window.__ibpData;
+        if (raw) return raw;
+      } catch {}
+      return { team: DEFAULT_TEAM, wfaDates: DEFAULT_WFA };
+    }
+    function saveData(data) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+      window.__ibpData = data;
+    }
+
+    // ─── main ────────────────────────────────────────────────
+    function App() {
+      const [data, setData] = useState(() => loadData());
+      const [activeTab, setActiveTab] = useState("monitor");
+      const [view, setView] = useState("timeline");
+      const [selectedMonth, setSelectedMonth] = useState(2);
+      const [hoveredDate, setHoveredDate] = useState(null);
+      const [modalPerson, setModalPerson] = useState(null);
+      const today = new Date(2026,2,11);
+      const todayStr = fmt(today);
+      const { team, wfaDates } = data;
+      function updateData(next) { const d={...data,...next}; saveData(d); setData(d); }
+      const onLeaveToday = team.filter(p=>isOnLeave(p,todayStr));
+      const availableToday = team.filter(p=>!isOnLeave(p,todayStr));
+      const nextHoliday = HOLIDAYS.find(h=>h.date>=todayStr);
+      return (
+        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${T.bg} 0%,#162230 50%,#1A2736 100%)`,color:T.primary,fontFamily:"'Segoe UI','SF Pro Display',-apple-system,sans-serif"}}>
+          <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,pointerEvents:"none",backgroundImage:`radial-gradient(circle at 1px 1px,rgba(255,255,255,0.015) 1px,transparent 0)`,backgroundSize:"40px 40px",zIndex:0}}/>
+          <div style={{position:"relative",zIndex:1,maxWidth:1400,margin:"0 auto",padding:"24px 20px"}}>
+            <header style={{marginBottom:28}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+                    <div style={{width:8,height:32,borderRadius:4,background:`linear-gradient(180deg,${T.accent},${T.amber})`}}/>
+                    <h1 style={{fontSize:26,fontWeight:800,margin:0,letterSpacing:"-0.5px",background:`linear-gradient(135deg,${T.primary},${T.teal})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+                      IBP Leave Monitor
+                    </h1>
+                  </div>
+                  <p style={{color:T.secondary,margin:"4px 0 0 20px",fontSize:12}}>
+                    Telkom Indonesia — EBIS Partner &nbsp;·&nbsp; {fmtFull(today)}
+                  </p>
+                </div>
+                <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.04)",borderRadius:10,padding:4}}>
+                  {[["monitor","📊 Monitor"],["cms","⚙️ CMS"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setActiveTab(v)} style={{
+                      padding:"8px 20px",borderRadius:7,border:"none",
+                      background:activeTab===v?T.teal:"transparent",
+                      color:activeTab===v?T.bg:T.secondary,
+                      fontWeight:activeTab===v?700:500,fontSize:13,cursor:"pointer",transition:"all 0.2s"
+                    }}>{l}</button>
+                  ))}
+                </div>
+              </div>
+            </header>
+            {activeTab === "monitor" ? (
+              <MonitorTab
+                team={team} wfaDates={wfaDates} today={today} todayStr={todayStr}
+                onLeaveToday={onLeaveToday} availableToday={availableToday} nextHoliday={nextHoliday}
+                view={view} setView={setView}
+                selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth}
+                hoveredDate={hoveredDate} setHoveredDate={setHoveredDate}
+                modalPerson={modalPerson} setModalPerson={setModalPerson}
+              />
+            ) : (
+              <CMSTab team={team} wfaDates={wfaDates} updateData={updateData} todayStr={todayStr} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MONITOR TAB
+    // ═══════════════════════════════════════════════════════════
+    function MonitorTab({ team, wfaDates, today, todayStr, onLeaveToday, availableToday, nextHoliday, view, setView, selectedMonth, setSelectedMonth, hoveredDate, setHoveredDate, modalPerson, setModalPerson }) {
+      const monthDates = useMemo(()=>getMonthDates(2026,selectedMonth),[selectedMonth]);
+      return (
+        <>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12,marginBottom:24}}>
+            <StatCard icon="🟢" label="Hadir Hari Ini" value={availableToday.length} sub={`dari ${team.length} anggota`} accent={T.teal}/>
+            <StatCard icon="✈️" label="Cuti Hari Ini" value={onLeaveToday.length} sub={onLeaveToday.map(p=>p.name).join(", ")||"—"} accent={T.orange}/>
+            <StatCard icon="🏖️" label="Libur Berikutnya" value={nextHoliday?fmtShort(parseDate(nextHoliday.date)):"—"} sub={nextHoliday?.name||""} accent={T.red}/>
+            <StatCard icon="🏠" label="WFA Berikutnya" value={wfaDates.filter(d=>d>=todayStr).length>0?fmtShort(parseDate(wfaDates.filter(d=>d>=todayStr)[0])):"—"} sub="Work From Anywhere" accent={T.blue}/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap",justifyContent:"space-between"}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <span style={{color:T.secondary,fontSize:12,alignSelf:"center",marginRight:4}}>Bulan:</span>
+              {MONTHS_ID.map((m,i)=>(
+                <button key={i} onClick={()=>setSelectedMonth(i)} style={{
+                  padding:"4px 10px",borderRadius:6,border:"none",
+                  background:selectedMonth===i?T.accent:"rgba(255,255,255,0.04)",
+                  color:selectedMonth===i?"#fff":T.secondary,
+                  fontWeight:selectedMonth===i?700:400,fontSize:12,cursor:"pointer"
+                }}>{m.slice(0,3)}</button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              {[["timeline","⏳"],["calendar","📅"],["summary","📋"]].map(([v,icon])=>(
+                <button key={v} onClick={()=>setView(v)} style={{
+                  padding:"6px 14px",borderRadius:7,border:"none",
+                  background:view===v?T.teal:"rgba(255,255,255,0.05)",
+                  color:view===v?T.bg:T.secondary,
+                  fontWeight:view===v?700:500,fontSize:12,cursor:"pointer"
+                }}>{icon} {v.charAt(0).toUpperCase()+v.slice(1)}</button>
+              ))}
+            </div>
+          </div>
+          {view==="timeline" && <TimelineView dates={monthDates} team={team} wfaDates={wfaDates} todayStr={todayStr} hoveredDate={hoveredDate} setHoveredDate={setHoveredDate} setModalPerson={setModalPerson}/>}
+          {view==="calendar" && <CalendarView year={2026} month={selectedMonth} team={team} wfaDates={wfaDates} todayStr={todayStr}/>}
+          {view==="summary" && <SummaryView team={team} wfaDates={wfaDates} todayStr={todayStr} selectedMonth={selectedMonth}/>}
+          {modalPerson && (
+            <PersonModal person={team.find(p=>p.name===modalPerson)} todayStr={todayStr} onClose={()=>setModalPerson(null)}/>
+          )}
+          <div style={{marginTop:24,padding:"14px 18px",borderRadius:12,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.05)",display:"flex",flexWrap:"wrap",gap:18,alignItems:"center"}}>
+            <span style={{fontSize:11,fontWeight:700,color:T.secondary}}>KETERANGAN:</span>
+            <Legend color={T.red} label="Libur Nasional"/>
+            <Legend color={T.amber} label="Cuti Besar (Cubes)"/>
+            <Legend color={T.orange} label="Cuti Personal"/>
+            <Legend color={T.blue} label="WFA"/>
+            <Legend color={T.teal} label="Hari Ini"/>
+          </div>
+        </>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CMS TAB
+    // ═══════════════════════════════════════════════════════════
+    function CMSTab({ team, wfaDates, updateData, todayStr }) {
+      const [cmsView, setCmsView] = useState("leaves");
+      const [editingLeave, setEditingLeave] = useState(null);
+      const [editingMember, setEditingMember] = useState(null);
+      const [confirmDelete, setConfirmDelete] = useState(null);
+      const [toast, setToast] = useState(null);
+      function showToast(msg, ok=true) { setToast({msg,ok}); setTimeout(()=>setToast(null),2500); }
+      function saveLeave(personId, leave) {
+        const nextTeam = team.map(p => {
+          if(p.id !== personId) return p;
+          const exists = p.leaves.find(l=>l.id===leave.id);
+          const nextLeaves = exists ? p.leaves.map(l=>l.id===leave.id?leave:l) : [...p.leaves, {...leave, id: Date.now()}];
+          return {...p, leaves: nextLeaves};
+        });
+        updateData({team:nextTeam}); setEditingLeave(null); showToast("Cuti berhasil disimpan ✓");
+      }
+      function deleteLeave(personId, leaveId) {
+        const nextTeam = team.map(p => p.id!==personId ? p : {...p, leaves:p.leaves.filter(l=>l.id!==leaveId)});
+        updateData({team:nextTeam}); setConfirmDelete(null); showToast("Cuti dihapus");
+      }
+      function saveMember(member) {
+        const exists = team.find(p=>p.id===member.id);
+        const nextTeam = exists ? team.map(p=>p.id===member.id?{...p,name:member.name}:p) : [...team, {id:Date.now(),name:member.name,leaves:[]}];
+        updateData({team:nextTeam}); setEditingMember(null); showToast("Anggota disimpan ✓");
+      }
+      function deleteMember(id) { updateData({team:team.filter(p=>p.id!==id)}); setConfirmDelete(null); showToast("Anggota dihapus"); }
+      function addWFA(dateStr) { if(!dateStr||wfaDates.includes(dateStr)) return; updateData({wfaDates:[...wfaDates,dateStr].sort()}); showToast("WFA date ditambahkan ✓"); }
+      function removeWFA(dateStr) { updateData({wfaDates:wfaDates.filter(d=>d!==dateStr)}); showToast("WFA date dihapus"); }
+      return (
+        <div>
+          {toast && (
+            <div style={{position:"fixed",top:24,right:24,zIndex:999,background:toast.ok?T.teal:T.accent,color:T.bg,padding:"10px 20px",borderRadius:10,fontWeight:700,fontSize:13,boxShadow:"0 8px 24px rgba(0,0,0,0.4)"}}>
+              {toast.msg}
+            </div>
+          )}
+          <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.04)",borderRadius:10,padding:4,marginBottom:20,width:"fit-content"}}>
+            {[["leaves","✈️ Data Cuti"],["members","👥 Anggota"],["wfa","🏠 WFA Dates"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setCmsView(v)} style={{padding:"7px 16px",borderRadius:7,border:"none",background:cmsView===v?"rgba(255,255,255,0.1)":"transparent",color:cmsView===v?T.primary:T.secondary,fontWeight:cmsView===v?700:400,fontSize:13,cursor:"pointer"}}>{l}</button>
+            ))}
+          </div>
+          {cmsView==="leaves" && (
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              {team.map(person=>(
+                <div key={person.id} style={{background:T.card,borderRadius:14,padding:20,border:"1px solid rgba(255,255,255,0.06)"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${T.blue},${T.teal})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14}}>
+                        {person.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:15}}>{person.name}</div>
+                        <div style={{fontSize:11,color:T.secondary}}>{person.leaves.length} entri cuti</div>
+                      </div>
+                    </div>
+                    <button onClick={()=>setEditingLeave({personId:person.id,isNew:true})} style={btnStyle(T.teal)}>+ Tambah Cuti</button>
+                  </div>
+                  {person.leaves.length===0 ? (
+                    <div style={{fontSize:12,color:T.secondary,padding:"8px 0",fontStyle:"italic"}}>Belum ada cuti terdaftar.</div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {person.leaves.map(l=>{
+                        const start=parseDate(l.start), end=parseDate(l.end);
+                        const days=Math.round((end-start)/86400000)+1;
+                        const active=todayStr>=l.start&&todayStr<=l.end;
+                        return (
+                          <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:10,background:"rgba(255,255,255,0.03)",border:`1px solid ${active?"rgba(251,133,0,0.3)":"rgba(255,255,255,0.06)"}`,borderLeft:`3px solid ${l.type==="cubes"?T.amber:T.orange}`}}>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:13,fontWeight:600}}>
+                                {fmtShort(start)} — {fmtShort(end)}
+                                {active && <span style={{marginLeft:8,fontSize:10,background:T.orange,color:"#fff",padding:"1px 6px",borderRadius:4,fontWeight:700}}>AKTIF</span>}
+                              </div>
+                              <div style={{fontSize:11,color:T.secondary,marginTop:2}}>
+                                {days} hari · {l.type==="cubes"?"Cuti Besar":"Cuti Personal"}
+                                {l.note&&<span style={{color:T.amber}}> · {l.note}</span>}
+                              </div>
+                            </div>
+                            <button onClick={()=>setEditingLeave({personId:person.id,leaveId:l.id,leave:l})} style={iconBtn(T.blue)}>✏️</button>
+                            <button onClick={()=>setConfirmDelete({type:"leave",payload:{personId:person.id,leaveId:l.id},label:`cuti ${fmtShort(start)}–${fmtShort(end)} untuk ${person.name}`})} style={iconBtn(T.red)}>🗑️</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {cmsView==="members" && (
+            <div>
+              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+                <button onClick={()=>setEditingMember({id:null,name:"",isNew:true})} style={btnStyle(T.teal)}>+ Tambah Anggota</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+                {team.map(p=>(
+                  <div key={p.id} style={{background:T.card,borderRadius:12,padding:16,border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:40,height:40,borderRadius:10,background:`linear-gradient(135deg,${T.blue},${T.teal})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:15,flexShrink:0}}>
+                      {p.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                      <div style={{fontSize:11,color:T.secondary}}>{p.leaves.length} cuti</div>
+                    </div>
+                    <div style={{display:"flex",gap:4}}>
+                      <button onClick={()=>setEditingMember({id:p.id,name:p.name})} style={iconBtn(T.blue)}>✏️</button>
+                      <button onClick={()=>setConfirmDelete({type:"member",payload:{id:p.id},label:p.name})} style={iconBtn(T.red)}>🗑️</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {cmsView==="wfa" && <WFAEditor wfaDates={wfaDates} addWFA={addWFA} removeWFA={removeWFA}/>}
+          {editingLeave && (
+            <LeaveFormModal personId={editingLeave.personId} personName={team.find(p=>p.id===editingLeave.personId)?.name} leave={editingLeave.leave} isNew={editingLeave.isNew} onSave={saveLeave} onClose={()=>setEditingLeave(null)}/>
+          )}
+          {editingMember && (
+            <MemberFormModal member={editingMember} onSave={saveMember} onClose={()=>setEditingMember(null)}/>
+          )}
+          {confirmDelete && (
+            <ConfirmModal label={confirmDelete.label} onConfirm={()=>{ if(confirmDelete.type==="leave") deleteLeave(confirmDelete.payload.personId,confirmDelete.payload.leaveId); else deleteMember(confirmDelete.payload.id); }} onClose={()=>setConfirmDelete(null)}/>
+          )}
+        </div>
+      );
+    }
+
+    // ─── WFA Editor ──────────────────────────────────────────
+    function WFAEditor({ wfaDates, addWFA, removeWFA }) {
+      const [newDate, setNewDate] = useState("");
+      return (
+        <div style={{background:T.card,borderRadius:14,padding:24,border:"1px solid rgba(255,255,255,0.06)",maxWidth:520}}>
+          <h3 style={{margin:"0 0 16px",fontSize:15,fontWeight:700}}>🏠 WFA Dates</h3>
+          <div style={{display:"flex",gap:8,marginBottom:20}}>
+            <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} style={{...inputStyle,flex:1}}/>
+            <button onClick={()=>{addWFA(newDate);setNewDate("");}} style={btnStyle(T.teal)}>Tambah</button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {wfaDates.length===0&&<p style={{color:T.secondary,fontSize:12}}>Belum ada WFA date.</p>}
+            {wfaDates.map(d=>(
+              <div key={d} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:10,background:"rgba(69,123,157,0.1)",borderLeft:`3px solid ${T.blue}`}}>
+                <span style={{fontSize:13,fontWeight:600}}>{fmtFull(parseDate(d))}</span>
+                <button onClick={()=>removeWFA(d)} style={iconBtn(T.red)}>🗑️</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Leave Form Modal ─────────────────────────────────────
+    function LeaveFormModal({ personId, personName, leave, isNew, onSave, onClose }) {
+      const [form, setForm] = useState({ id: leave?.id || Date.now(), start: leave?.start || "", end: leave?.end || "", type: leave?.type || "cuti", note: leave?.note || "" });
+      const [err, setErr] = useState("");
+      function handleSave() {
+        if(!form.start||!form.end) { setErr("Tanggal mulai dan selesai wajib diisi."); return; }
+        if(form.start>form.end) { setErr("Tanggal selesai harus setelah tanggal mulai."); return; }
+        onSave(personId, form);
+      }
+      return (
+        <Overlay onClose={onClose}>
+          <h2 style={{margin:"0 0 4px",fontSize:20,fontWeight:800}}>{isNew?"Tambah Cuti":"Edit Cuti"}</h2>
+          <p style={{color:T.secondary,fontSize:13,marginBottom:20}}>{personName}</p>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <label style={labelStyle}>Mulai<input type="date" value={form.start} onChange={e=>setForm({...form,start:e.target.value})} style={inputStyle}/></label>
+              <label style={labelStyle}>Selesai<input type="date" value={form.end} onChange={e=>setForm({...form,end:e.target.value})} style={inputStyle}/></label>
+            </div>
+            <label style={labelStyle}>Jenis Cuti
+              <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} style={inputStyle}>
+                <option value="cuti">Cuti Personal</option>
+                <option value="cubes">Cuti Besar (Cubes)</option>
+              </select>
+            </label>
+            <label style={labelStyle}>Catatan (opsional)<input type="text" value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="e.g. Masuk 18 Mei" style={inputStyle}/></label>
+            {err && <div style={{fontSize:12,color:T.red,background:"rgba(230,57,70,0.1)",padding:"8px 12px",borderRadius:8}}>{err}</div>}
+            {form.start&&form.end&&form.start<=form.end&&(
+              <div style={{fontSize:12,color:T.teal,background:"rgba(46,196,182,0.08)",padding:"8px 12px",borderRadius:8}}>
+                Durasi: {Math.round((parseDate(form.end)-parseDate(form.start))/86400000)+1} hari kalender
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:24,justifyContent:"flex-end"}}>
+            <button onClick={onClose} style={btnStyle("rgba(255,255,255,0.06)",T.secondary)}>Batal</button>
+            <button onClick={handleSave} style={btnStyle(T.teal)}>💾 Simpan</button>
+          </div>
+        </Overlay>
+      );
+    }
+
+    // ─── Member Form Modal ────────────────────────────────────
+    function MemberFormModal({ member, onSave, onClose }) {
+      const [name, setName] = useState(member.name||"");
+      return (
+        <Overlay onClose={onClose}>
+          <h2 style={{margin:"0 0 20px",fontSize:20,fontWeight:800}}>{member.isNew?"Tambah Anggota":"Edit Nama"}</h2>
+          <label style={labelStyle}>Nama Anggota<input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Bu Tamie" style={inputStyle}/></label>
+          <div style={{display:"flex",gap:8,marginTop:20,justifyContent:"flex-end"}}>
+            <button onClick={onClose} style={btnStyle("rgba(255,255,255,0.06)",T.secondary)}>Batal</button>
+            <button onClick={()=>{if(name.trim())onSave({id:member.id,name:name.trim()})}} style={btnStyle(T.teal)}>💾 Simpan</button>
+          </div>
+        </Overlay>
+      );
+    }
+
+    // ─── Confirm Modal ────────────────────────────────────────
+    function ConfirmModal({ label, onConfirm, onClose }) {
+      return (
+        <Overlay onClose={onClose}>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:16}}>🗑️</div>
+            <h2 style={{margin:"0 0 8px",fontSize:18,fontWeight:700}}>Hapus?</h2>
+            <p style={{color:T.secondary,fontSize:13,marginBottom:24}}>Yakin ingin menghapus <strong style={{color:T.primary}}>{label}</strong>? Tindakan ini tidak dapat dibatalkan.</p>
+            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+              <button onClick={onClose} style={btnStyle("rgba(255,255,255,0.06)",T.secondary)}>Batal</button>
+              <button onClick={onConfirm} style={btnStyle(T.red)}>Hapus</button>
+            </div>
+          </div>
+        </Overlay>
+      );
+    }
+
+    // ─── Overlay wrapper ──────────────────────────────────────
+    function Overlay({ children, onClose }) {
+      return (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}} onClick={onClose}>
+          <div style={{background:T.card,borderRadius:16,padding:32,maxWidth:480,width:"90%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Person Modal ─────────────────────────────────────────
+    function PersonModal({ person, todayStr, onClose }) {
+      if(!person) return null;
+      return (
+        <Overlay onClose={onClose}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+            <h2 style={{margin:0,fontSize:20,fontWeight:800}}>{person.name}</h2>
+            <button onClick={onClose} style={{background:"rgba(255,255,255,0.06)",border:"none",color:T.secondary,width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:16}}>✕</button>
+          </div>
+          {person.leaves.length===0
+            ? <p style={{color:T.secondary}}>Tidak ada jadwal cuti.</p>
+            : person.leaves.map(l=>{
+                const s=parseDate(l.start),e=parseDate(l.end);
+                return (
+                  <div key={l.id} style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"14px 18px",borderLeft:`3px solid ${l.type==="cubes"?T.amber:T.orange}`,marginBottom:10}}>
+                    <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>{fmtShort(s)} — {fmtShort(e)}</div>
+                    <div style={{color:T.secondary,fontSize:12}}>{Math.round((e-s)/86400000)+1} hari · {l.type==="cubes"?"Cuti Besar":"Cuti Personal"}{l.note&&<span style={{color:T.amber}}> · {l.note}</span>}</div>
+                  </div>
+                );
+              })
+          }
+          <div style={{marginTop:16,padding:"10px 14px",borderRadius:8,background:isOnLeave(person,todayStr)?"rgba(251,133,0,0.12)":"rgba(46,196,182,0.12)",border:`1px solid ${isOnLeave(person,todayStr)?"rgba(251,133,0,0.25)":"rgba(46,196,182,0.25)"}`}}>
+            <span style={{fontSize:13,fontWeight:600}}>{isOnLeave(person,todayStr)?"✈️ Sedang cuti hari ini":"🟢 Tersedia hari ini"}</span>
+          </div>
+        </Overlay>
+      );
+    }
+
+    // ─── Timeline ─────────────────────────────────────────────
+    function TimelineView({ dates, team, wfaDates, todayStr, hoveredDate, setHoveredDate, setModalPerson }) {
+      return (
+        <div style={{background:T.card,borderRadius:16,border:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
+          <div style={{overflowX:"auto"}}>
+            <table style={{borderCollapse:"collapse",width:"100%",minWidth:dates.length*36+140}}>
+              <thead>
+                <tr>
+                  <th style={{position:"sticky",left:0,zIndex:10,background:"#1E3045",padding:"10px 14px",textAlign:"left",fontSize:12,color:T.secondary,fontWeight:600,borderBottom:"1px solid rgba(255,255,255,0.06)",minWidth:130}}>Nama</th>
+                  {dates.map(d=>{
+                    const ds=fmt(d),hol=isHoliday(ds),wfa=wfaDates.includes(ds),isToday=ds===todayStr,we=isWeekend(d);
+                    return (
+                      <th key={ds} onMouseEnter={()=>setHoveredDate(ds)} onMouseLeave={()=>setHoveredDate(null)} style={{padding:"6px 1px",textAlign:"center",borderBottom:"1px solid rgba(255,255,255,0.06)",background:isToday?"rgba(46,196,182,0.12)":hol?"rgba(230,57,70,0.08)":wfa?"rgba(69,123,157,0.08)":we?"rgba(255,255,255,0.02)":"transparent",minWidth:32}}>
+                        <div style={{fontSize:9,color:we?"rgba(255,255,255,0.2)":T.secondary}}>{DAYS_ID[d.getDay()]}</div>
+                        <div style={{fontSize:11,fontWeight:isToday?800:500,color:isToday?T.teal:hol?T.red:we?"rgba(255,255,255,0.2)":T.primary}}>{d.getDate()}</div>
+                        {hol&&<div style={{width:4,height:4,borderRadius:2,background:T.red,margin:"2px auto 0"}}/>}
+                        {wfa&&!hol&&<div style={{width:4,height:4,borderRadius:2,background:T.blue,margin:"2px auto 0"}}/>}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {team.map((person,pi)=>(
+                  <tr key={person.id} style={{borderBottom:"1px solid rgba(255,255,255,0.03)"}}>
+                    <td onClick={()=>setModalPerson(person.name)} style={{position:"sticky",left:0,zIndex:5,background:pi%2===0?T.card:"rgba(255,255,255,0.015)",padding:"9px 14px",fontSize:13,fontWeight:600,cursor:"pointer",color:isOnLeave(person,todayStr)?T.orange:T.primary,whiteSpace:"nowrap"}}>
+                      <span style={{marginRight:6,fontSize:10}}>{isOnLeave(person,todayStr)?"✈️":"🟢"}</span>{person.name}
+                    </td>
+                    {dates.map(d=>{
+                      const ds=fmt(d),hol=isHoliday(ds),leave=!hol?getLeaveForDate(person,ds):null,we=isWeekend(d),isToday=ds===todayStr,wfa=wfaDates.includes(ds);
+                      const barColor=leave?(leave.type==="cubes"?T.amber:T.orange):null;
+                      const isStart=leave&&(ds===leave.start||d.getDate()===1);
+                      const isEnd=leave&&(ds===leave.end||d.getDate()===getDaysInMonth(d.getFullYear(),d.getMonth()));
+                      return (
+                        <td key={ds} style={{padding:"9px 1px",textAlign:"center",background:isToday?"rgba(46,196,182,0.06)":hol?"rgba(230,57,70,0.04)":wfa?"rgba(69,123,157,0.04)":we?"rgba(255,255,255,0.01)":"transparent",position:"relative"}}>
+                          {barColor&&<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:isStart?4:0,right:isEnd?4:0,height:20,background:barColor,opacity:0.75,borderRadius:`${isStart?5:0}px ${isEnd?5:0}px ${isEnd?5:0}px ${isStart?5:0}px`}}/>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {hoveredDate&&(
+            <div style={{padding:"9px 18px",background:"rgba(255,255,255,0.03)",borderTop:"1px solid rgba(255,255,255,0.06)",fontSize:12,color:T.secondary,display:"flex",gap:14,flexWrap:"wrap"}}>
+              <span style={{fontWeight:600,color:T.primary}}>{fmtFull(parseDate(hoveredDate))}</span>
+              {isHoliday(hoveredDate)&&<span style={{color:T.red}}>🔴 {isHoliday(hoveredDate).name}</span>}
+              {wfaDates.includes(hoveredDate)&&<span style={{color:T.blue}}>🏠 WFA</span>}
+              {(()=>{const ol=team.filter(p=>isOnLeave(p,hoveredDate));return ol.length>0?<span style={{color:T.orange}}>✈️ {ol.map(p=>p.name).join(", ")}</span>:<span style={{color:T.teal}}>✅ Semua hadir</span>;})()}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Calendar ─────────────────────────────────────────────
+    function CalendarView({ year, month, team, wfaDates, todayStr }) {
+      const firstDay=new Date(year,month,1).getDay(),daysInMonth=getDaysInMonth(year,month);
+      const cells=[...Array(firstDay).fill(null),...Array.from({length:daysInMonth},(_,i)=>i+1)];
+      return (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}}>
+          {DAYS_ID.map(d=><div key={d} style={{textAlign:"center",padding:"7px 0",fontSize:11,fontWeight:700,color:T.secondary,letterSpacing:1}}>{d}</div>)}
+          {cells.map((day,i)=>{
+            if(!day) return <div key={`e${i}`}/>;
+            const d=new Date(year,month,day),ds=fmt(d),hol=isHoliday(ds),wfa=wfaDates.includes(ds),we=isWeekend(d),isToday=ds===todayStr,ol=team.filter(p=>isOnLeave(p,ds));
+            return (
+              <div key={ds} style={{background:isToday?"rgba(46,196,182,0.15)":hol?"rgba(230,57,70,0.1)":T.card,borderRadius:10,padding:"9px 7px",minHeight:82,border:isToday?`2px solid ${T.teal}`:"1px solid rgba(255,255,255,0.04)",opacity:we&&!hol?0.5:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                  <span style={{fontSize:14,fontWeight:isToday?800:600,color:isToday?T.teal:hol?T.red:T.primary}}>{day}</span>
+                  {wfa&&<span style={{fontSize:8,background:T.blue,color:"#fff",padding:"1px 4px",borderRadius:3,fontWeight:700}}>WFA</span>}
+                </div>
+                {hol&&<div style={{fontSize:8,color:T.red,marginBottom:3,lineHeight:1.2,fontWeight:600}}>{hol.name}</div>}
+                {ol.slice(0,2).map(p=><div key={p.id} style={{fontSize:9,color:"#fff",background:T.orange,borderRadius:3,padding:"1px 4px",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✈️ {p.name}</div>)}
+                {ol.length>2&&<div style={{fontSize:9,color:T.secondary}}>+{ol.length-2} lagi</div>}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ─── Summary ──────────────────────────────────────────────
+    function SummaryView({ team, wfaDates, todayStr, selectedMonth }) {
+      const monthDates=getMonthDates(2026,selectedMonth);
+      const stats=team.map(p=>{
+        let ld=0; monthDates.forEach(d=>{const ds=fmt(d);if(!isWeekend(d)&&!isHoliday(ds)&&isOnLeave(p,ds))ld++;});
+        const fl=p.leaves.find(l=>{const s=parseDate(l.start),e=parseDate(l.end);return s.getMonth()===selectedMonth||e.getMonth()===selectedMonth;});
+        return {...p,leaveDays:ld,firstLeave:fl};
+      }).sort((a,b)=>b.leaveDays-a.leaveDays);
+      const workDays=monthDates.filter(d=>!isWeekend(d)&&!isHoliday(fmt(d)));
+      const minAvail=workDays.reduce((min,d)=>{const n=team.filter(p=>!isOnLeave(p,fmt(d))).length;return n<min.n?{n,d}:min},{n:999,d:null});
+      return (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          <div style={{background:T.card,borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,0.06)"}}>
+            <h3 style={{margin:"0 0 14px",fontSize:14,fontWeight:700,color:T.secondary}}>📊 Ringkasan — {MONTHS_ID[selectedMonth]}</h3>
+            {stats.map((s,i)=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<stats.length-1?"1px solid rgba(255,255,255,0.04)":"none"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600}}>{s.name}</div>
+                  {s.firstLeave&&<div style={{fontSize:11,color:T.secondary}}>{fmtShort(parseDate(s.firstLeave.start))} — {fmtShort(parseDate(s.firstLeave.end))}{s.firstLeave.note&&<span style={{color:T.amber}}> · {s.firstLeave.note}</span>}</div>}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:Math.max(s.leaveDays*10,0),height:7,borderRadius:4,background:s.leaveDays>10?T.accent:s.leaveDays>5?T.amber:T.teal}}/>
+                  <span style={{fontSize:12,fontWeight:700,minWidth:28,textAlign:"right",color:s.leaveDays>10?T.accent:s.leaveDays>5?T.amber:T.teal}}>{s.leaveDays}d</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{background:T.card,borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,0.06)"}}>
+              <h3 style={{margin:"0 0 10px",fontSize:14,fontWeight:700,color:T.secondary}}>⚠️ Kapasitas Minimum</h3>
+              {minAvail.d?<><div style={{fontSize:44,fontWeight:800,color:minAvail.n<=3?T.accent:T.amber}}>{minAvail.n}/{team.length}</div><div style={{fontSize:12,color:T.secondary,marginTop:4}}>orang tersedia pada {fmtFull(minAvail.d)}</div></>:<div style={{color:T.secondary}}>Tidak ada data</div>}
+            </div>
+            <div style={{background:T.card,borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,0.06)",flex:1}}>
+              <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700,color:T.secondary}}>📋 Libur {MONTHS_ID[selectedMonth]}</h3>
+              {HOLIDAYS.filter(h=>parseDate(h.date).getMonth()===selectedMonth).map(h=>(
+                <div key={h.date} style={{display:"flex",justifyContent:"space-between",padding:"7px 10px",borderRadius:7,background:"rgba(230,57,70,0.07)",borderLeft:`3px solid ${T.red}`,marginBottom:6}}>
+                  <span style={{fontSize:11,fontWeight:500}}>{h.name}</span>
+                  <span style={{fontSize:11,color:T.secondary,fontWeight:600,whiteSpace:"nowrap",marginLeft:8}}>{fmtShort(parseDate(h.date))}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── shared small components ──────────────────────────────
+    function StatCard({ icon, label, value, sub, accent }) {
+      return (
+        <div style={{background:T.card,borderRadius:14,padding:"16px 18px",border:"1px solid rgba(255,255,255,0.05)",borderTop:`2px solid ${accent}`}}>
+          <div style={{fontSize:12,color:T.secondary,marginBottom:5}}>{icon} {label}</div>
+          <div style={{fontSize:24,fontWeight:800,color:accent,lineHeight:1}}>{value}</div>
+          <div style={{fontSize:11,color:T.secondary,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</div>
+        </div>
+      );
+    }
+    function Legend({ color, label }) {
+      return (
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{width:11,height:11,borderRadius:3,background:color}}/>
+          <span style={{fontSize:11,color:T.secondary}}>{label}</span>
+        </div>
+      );
+    }
+
+    // ─── style helpers ────────────────────────────────────────
+    const inputStyle = {
+      width:"100%", padding:"9px 12px", borderRadius:8,
+      background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)",
+      color:"#F1FAEE", fontSize:13, outline:"none", boxSizing:"border-box", marginTop:5,
+    };
+    const labelStyle = { display:"flex", flexDirection:"column", fontSize:12, color:"#8FA3B8", fontWeight:600 };
+    function btnStyle(bg, color) {
+      return { padding:"8px 16px", borderRadius:8, border:"none", background:bg, color:color||"#0F1923", fontWeight:700, fontSize:13, cursor:"pointer" };
+    }
+    function iconBtn(color) {
+      return { background:`${color}22`, border:"none", color, width:32, height:32, borderRadius:8, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 };
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
