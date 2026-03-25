@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IBP Leave Monitor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -108,10 +109,10 @@
       const [data, setData] = useState(() => loadData());
       const [activeTab, setActiveTab] = useState("monitor");
       const [view, setView] = useState("timeline");
-      const [selectedMonth, setSelectedMonth] = useState(2);
+      const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
       const [hoveredDate, setHoveredDate] = useState(null);
       const [modalPerson, setModalPerson] = useState(null);
-      const today = new Date(2026,2,11);
+      const today = new Date();
       const todayStr = fmt(today);
       const { team, wfaDates } = data;
       function updateData(next) { const d={...data,...next}; saveData(d); setData(d); }
@@ -168,7 +169,7 @@
     // MONITOR TAB
     // ═══════════════════════════════════════════════════════════
     function MonitorTab({ team, wfaDates, today, todayStr, onLeaveToday, availableToday, nextHoliday, view, setView, selectedMonth, setSelectedMonth, hoveredDate, setHoveredDate, modalPerson, setModalPerson }) {
-      const monthDates = useMemo(()=>getMonthDates(2026,selectedMonth),[selectedMonth]);
+      const monthDates = useMemo(()=>getMonthDates(today.getFullYear(),selectedMonth),[selectedMonth]);
       return (
         <>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12,marginBottom:24}}>
@@ -201,8 +202,8 @@
             </div>
           </div>
           {view==="timeline" && <TimelineView dates={monthDates} team={team} wfaDates={wfaDates} todayStr={todayStr} hoveredDate={hoveredDate} setHoveredDate={setHoveredDate} setModalPerson={setModalPerson}/>}
-          {view==="calendar" && <CalendarView year={2026} month={selectedMonth} team={team} wfaDates={wfaDates} todayStr={todayStr}/>}
-          {view==="summary" && <SummaryView team={team} wfaDates={wfaDates} todayStr={todayStr} selectedMonth={selectedMonth}/>}
+          {view==="calendar" && <CalendarView year={today.getFullYear()} month={selectedMonth} team={team} wfaDates={wfaDates} todayStr={todayStr}/>}
+          {view==="summary" && <SummaryView team={team} wfaDates={wfaDates} todayStr={todayStr} selectedMonth={selectedMonth} year={today.getFullYear()}/>}
           {modalPerson && (
             <PersonModal person={team.find(p=>p.name===modalPerson)} todayStr={todayStr} onClose={()=>setModalPerson(null)}/>
           )}
@@ -563,8 +564,8 @@
     }
 
     // ─── Summary ──────────────────────────────────────────────
-    function SummaryView({ team, wfaDates, todayStr, selectedMonth }) {
-      const monthDates=getMonthDates(2026,selectedMonth);
+    function SummaryView({ team, wfaDates, todayStr, selectedMonth, year }) {
+      const monthDates=getMonthDates(year,selectedMonth);
       const stats=team.map(p=>{
         let ld=0; monthDates.forEach(d=>{const ds=fmt(d);if(!isWeekend(d)&&!isHoliday(ds)&&isOnLeave(p,ds))ld++;});
         const fl=p.leaves.find(l=>{const s=parseDate(l.start),e=parseDate(l.end);return s.getMonth()===selectedMonth||e.getMonth()===selectedMonth;});
