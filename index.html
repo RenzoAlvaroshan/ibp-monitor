@@ -1,23 +1,18 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>IBP Leave Monitor</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase SDK -->
   <script type="module" id="firebase-init">
-    // ════════════════════════════════════════════════════════
-    // 🔥 PASTE YOUR FIREBASE CONFIG HERE
-    // Go to: Firebase Console → Project Settings → Your Apps → SDK setup
-    // ════════════════════════════════════════════════════════
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     const firebaseConfig = {
       apiKey: "AIzaSyBK4Vvtn_P3nqcxkui9ySbJThr807xxb4I",
       authDomain: "ibp-leave-monitor.firebaseapp.com",
@@ -26,718 +21,873 @@
       messagingSenderId: "230380682658",
       appId: "1:230380682658:web:5f8f72bfd6c419070c86fb"
     };
-
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
-
-    // Expose to React (module scope bridging)
-    window.__firebase = { db, doc, getDoc, setDoc, onSnapshot };
+    window.__firebase = { db, doc, setDoc, onSnapshot };
   </script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0F1923; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-
-    .sync-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      display: inline-block; margin-right: 5px;
+    :root {
+      --bg:        #080E14;
+      --bg2:       #0D1520;
+      --bg3:       #111D2B;
+      --border:    rgba(255,255,255,0.06);
+      --border2:   rgba(255,255,255,0.1);
+      --text:      #E8F4F0;
+      --muted:     #4A6278;
+      --muted2:    #1E2F3E;
+      --teal:      #00D4B4;
+      --teal-dim:  rgba(0,212,180,0.1);
+      --amber:     #F5A623;
+      --amber-dim: rgba(245,166,35,0.1);
+      --red:       #FF4D5E;
+      --red-dim:   rgba(255,77,94,0.1);
+      --blue:      #3D8EF0;
+      --blue-dim:  rgba(61,142,240,0.1);
+      --orange:    #FF7A35;
+      --orange-dim:rgba(255,122,53,0.1);
+      --font-mono: 'DM Mono', monospace;
+      --font-ui:   'Sora', sans-serif;
     }
-    .sync-dot.live    { background: #2EC4B6; animation: pulse 2s infinite; }
-    .sync-dot.saving  { background: #FFB703; animation: pulse 0.5s infinite; }
-    .sync-dot.offline { background: #E63946; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-ui); min-height: 100vh; overflow-x: hidden; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 2px; }
 
-    .fade-in { animation: fadeIn 0.25s ease forwards; }
+    @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn  { from{opacity:0}to{opacity:1} }
+    @keyframes pulse   { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    .fade-up  { animation: fadeUp .3s ease forwards; }
+    .fade-in  { animation: fadeIn .2s ease forwards; }
+
+    .dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+    .dot.live{background:var(--teal);animation:pulse 2.5s ease infinite}
+    .dot.saving{background:var(--amber);animation:pulse .6s ease infinite}
+    .dot.offline,.dot.unconfigured{background:var(--red)}
+    .dot.connecting{background:var(--muted);animation:pulse 1s ease infinite}
+
+    .glass{background:linear-gradient(135deg,rgba(255,255,255,0.035) 0%,rgba(255,255,255,0.01) 100%);border:1px solid var(--border);backdrop-filter:blur(10px)}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease;letter-spacing:.01em}
+    .btn:active{transform:scale(.97)}
+    .btn-teal{background:var(--teal);color:#000}
+    .btn-teal:hover{background:#00f0cc}
+    .btn-ghost{background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid var(--border)}
+    .btn-ghost:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+    .btn-red{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,94,.2)}
+    .btn-red:hover{background:var(--red);color:#fff}
+    .btn-sm{padding:5px 10px;font-size:11px}
+    .btn-icon{padding:6px;border-radius:7px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+    .btn-icon:hover{background:rgba(255,255,255,0.07);color:var(--text)}
+
+    .input{width:100%;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);color:var(--text);font-family:var(--font-ui);font-size:13px;outline:none;transition:border-color .15s}
+    .input:focus{border-color:var(--teal)}
+    .input::placeholder{color:var(--muted)}
+    select.input option{background:var(--bg2)}
+
+    .tag{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.04em}
+
+    .nav-btn{width:100%;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;border:none;cursor:pointer;text-align:left;background:transparent;color:var(--muted);transition:all .15s;font-family:var(--font-ui);outline:none}
+    .nav-btn:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+    .nav-btn.active{background:rgba(0,212,180,0.1);color:var(--teal)}
+
+    .stagger>*{opacity:0;animation:fadeUp .35s ease forwards}
+    .stagger>*:nth-child(1){animation-delay:.05s}
+    .stagger>*:nth-child(2){animation-delay:.1s}
+    .stagger>*:nth-child(3){animation-delay:.15s}
+    .stagger>*:nth-child(4){animation-delay:.2s}
+    .stagger>*:nth-child(5){animation-delay:.25s}
+    .stagger>*:nth-child(6){animation-delay:.3s}
   </style>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useMemo, useEffect, useCallback, useRef } = React;
+<script type="text/babel">
+const { useState, useMemo, useEffect, useCallback, useRef } = React;
 
-    // ─── static data ─────────────────────────────────────────
-    const DEFAULT_TEAM = [
-      { id: 1,  name: "Bu Tamie",  leaves: [{ id: 1, start: "2026-03-27", end: "2026-03-31", type: "cuti" }] },
-      { id: 2,  name: "Pak Ardi",  leaves: [{ id: 1, start: "2026-03-30", end: "2026-05-13", type: "cubes", note: "Masuk 18 Mei" }] },
-      { id: 3,  name: "Pak Ian",   leaves: [{ id: 1, start: "2026-03-16", end: "2026-04-24", type: "cuti" }] },
-      { id: 4,  name: "Bu Widhia", leaves: [{ id: 1, start: "2026-03-16", end: "2026-03-27", type: "cuti" }] },
-      { id: 5,  name: "Bima",      leaves: [{ id: 1, start: "2026-03-11", end: "2026-03-13", type: "cuti" }] },
-      { id: 6,  name: "Renzo",     leaves: [{ id: 1, start: "2026-03-04", end: "2026-03-13", type: "cuti" }] },
-      { id: 7,  name: "Sadad",     leaves: [{ id: 1, start: "2026-03-16", end: "2026-03-17", type: "cuti" }, { id: 2, start: "2026-03-25", end: "2026-03-27", type: "cuti" }] },
-      { id: 8,  name: "Marwan",    leaves: [{ id: 1, start: "2026-03-09", end: "2026-03-13", type: "cuti" }] },
-      { id: 9,  name: "Bintang",   leaves: [{ id: 1, start: "2026-03-27", end: "2026-04-01", type: "cuti" }] },
-      { id: 10, name: "Shifa",     leaves: [{ id: 1, start: "2026-03-27", end: "2026-03-31", type: "cuti" }] },
-    ];
-    const HOLIDAYS = [
-      { date: "2026-01-01", name: "Tahun Baru 2026 Masehi" },
-      { date: "2026-01-16", name: "Isra Mi'raj Nabi Muhammad SAW" },
-      { date: "2026-02-16", name: "Tahun Baru Imlek 2577 Kongzili" },
-      { date: "2026-02-17", name: "Tahun Baru Imlek 2577 Kongzili" },
-      { date: "2026-03-18", name: "Hari Suci Nyepi" },
-      { date: "2026-03-19", name: "Hari Suci Nyepi (Cuti Bersama)" },
-      { date: "2026-03-20", name: "Cuti Bersama Idul Fitri" },
-      { date: "2026-03-21", name: "Hari Raya Idul Fitri 1447 H" },
-      { date: "2026-03-22", name: "Hari Raya Idul Fitri 1447 H" },
-      { date: "2026-03-23", name: "Cuti Bersama Idul Fitri" },
-      { date: "2026-03-24", name: "Cuti Bersama Idul Fitri" },
-      { date: "2026-04-03", name: "Wafat Yesus Kristus" },
-      { date: "2026-04-05", name: "Kebangkitan Yesus Kristus" },
-      { date: "2026-05-01", name: "Hari Buruh Internasional" },
-      { date: "2026-05-14", name: "Kenaikan Yesus Kristus" },
-      { date: "2026-05-15", name: "Kenaikan Yesus Kristus (Cuti Bersama)" },
-      { date: "2026-05-27", name: "Hari Raya Idul Adha 1447 H" },
-      { date: "2026-05-28", name: "Hari Raya Idul Adha (Cuti Bersama)" },
-      { date: "2026-05-31", name: "Hari Raya Waisak" },
-      { date: "2026-06-01", name: "Hari Lahir Pancasila" },
-      { date: "2026-06-16", name: "Tahun Baru Islam 1448 H" },
-      { date: "2026-08-17", name: "Proklamasi Kemerdekaan RI ke-81" },
-      { date: "2026-08-25", name: "Maulid Nabi Muhammad SAW" },
-      { date: "2026-12-24", name: "Kelahiran Yesus Kristus (Cuti Bersama)" },
-      { date: "2026-12-25", name: "Kelahiran Yesus Kristus" },
-    ];
-    const DEFAULT_WFA = ["2026-03-16","2026-03-17","2026-03-25","2026-03-26","2026-03-27"];
+const DEFAULT_TEAM = [
+  { id:1,  name:"Bu Tamie",      leaves:[{id:1,start:"2026-03-27",end:"2026-03-31",type:"cuti"}] },
+  { id:2,  name:"Pak Ardi",      leaves:[{id:1,start:"2026-03-30",end:"2026-05-13",type:"cubes",note:"Masuk 18 Mei"}] },
+  { id:3,  name:"Pak Ian",       leaves:[{id:1,start:"2026-03-16",end:"2026-04-24",type:"cuti"}] },
+  { id:4,  name:"Bu Widhia",     leaves:[{id:1,start:"2026-03-16",end:"2026-03-27",type:"cuti"}] },
+  { id:5,  name:"Bima",          leaves:[{id:1,start:"2026-03-11",end:"2026-03-13",type:"cuti"}] },
+  { id:6,  name:"Renzo Adriano", leaves:[{id:1,start:"2026-03-04",end:"2026-03-13",type:"cuti"}] },
+  { id:7,  name:"Sadad",         leaves:[{id:1,start:"2026-03-16",end:"2026-03-17",type:"cuti"},{id:2,start:"2026-03-25",end:"2026-03-27",type:"cuti"}] },
+  { id:8,  name:"Marwan",        leaves:[{id:1,start:"2026-03-09",end:"2026-03-13",type:"cuti"}] },
+  { id:9,  name:"Bintang",       leaves:[{id:1,start:"2026-03-27",end:"2026-04-01",type:"cuti"}] },
+  { id:10, name:"Shifa",         leaves:[{id:1,start:"2026-03-27",end:"2026-03-31",type:"cuti"}] },
+];
+const HOLIDAYS = [
+  {date:"2026-01-01",name:"Tahun Baru 2026"},{date:"2026-01-16",name:"Isra Mi'raj"},
+  {date:"2026-02-16",name:"Imlek 2577"},{date:"2026-02-17",name:"Imlek 2577"},
+  {date:"2026-03-18",name:"Hari Suci Nyepi"},{date:"2026-03-19",name:"Nyepi (Cuti Bersama)"},
+  {date:"2026-03-20",name:"Cuti Bersama Idul Fitri"},{date:"2026-03-21",name:"Idul Fitri 1447 H"},
+  {date:"2026-03-22",name:"Idul Fitri 1447 H"},{date:"2026-03-23",name:"Cuti Bersama Idul Fitri"},
+  {date:"2026-03-24",name:"Cuti Bersama Idul Fitri"},{date:"2026-04-03",name:"Wafat Yesus Kristus"},
+  {date:"2026-04-05",name:"Kebangkitan Yesus Kristus"},{date:"2026-05-01",name:"Hari Buruh"},
+  {date:"2026-05-14",name:"Kenaikan Yesus Kristus"},{date:"2026-05-15",name:"Kenaikan Yesus (CB)"},
+  {date:"2026-05-27",name:"Idul Adha 1447 H"},{date:"2026-05-28",name:"Idul Adha (CB)"},
+  {date:"2026-05-31",name:"Hari Raya Waisak"},{date:"2026-06-01",name:"Hari Lahir Pancasila"},
+  {date:"2026-06-16",name:"Tahun Baru Islam 1448 H"},{date:"2026-08-17",name:"HUT RI ke-81"},
+  {date:"2026-08-25",name:"Maulid Nabi Muhammad SAW"},{date:"2026-12-24",name:"Natal (CB)"},
+  {date:"2026-12-25",name:"Hari Natal"},
+];
+const DEFAULT_WFA = ["2026-03-16","2026-03-17","2026-03-25","2026-03-26","2026-03-27"];
+const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const DAYS_ID = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
 
-    // ─── utils ───────────────────────────────────────────────
-    function parseDate(s) { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
-    function fmt(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-    function fmtShort(d) { return d.toLocaleDateString("id-ID",{day:"numeric",month:"short"}); }
-    function fmtFull(d) { return d.toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}); }
-    function isWeekend(d) { return d.getDay()===0||d.getDay()===6; }
-    function isOnLeave(person,ds) { return person.leaves.some(l=>ds>=l.start&&ds<=l.end); }
-    function getLeaveForDate(person,ds) { return person.leaves.find(l=>ds>=l.start&&ds<=l.end); }
-    function isHoliday(ds) { return HOLIDAYS.find(h=>h.date===ds); }
-    function getDaysInMonth(y,m) { return new Date(y,m+1,0).getDate(); }
-    function getMonthDates(y,m) { const n=getDaysInMonth(y,m),r=[]; for(let i=1;i<=n;i++) r.push(new Date(y,m,i)); return r; }
-    const MONTHS_ID=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-    const DAYS_ID=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+function parseDate(s){const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}
+function fmt(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function fmtShort(d){return d.toLocaleDateString("id-ID",{day:"numeric",month:"short"})}
+function fmtFull(d){return d.toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+function isWeekend(d){return d.getDay()===0||d.getDay()===6}
+function isOnLeave(p,ds){return p.leaves.some(l=>ds>=l.start&&ds<=l.end)}
+function getLeaveForDate(p,ds){return p.leaves.find(l=>ds>=l.start&&ds<=l.end)}
+function isHoliday(ds){return HOLIDAYS.find(h=>h.date===ds)}
+function getDaysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+function getMonthDates(y,m){const n=getDaysInMonth(y,m),r=[];for(let i=1;i<=n;i++)r.push(new Date(y,m,i));return r}
+function initials(name){return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()}
+function workdaysBetween(start,end){let c=0,cur=new Date(parseDate(start));const e=parseDate(end);while(cur<=e){if(!isWeekend(cur)&&!isHoliday(fmt(cur)))c++;cur.setDate(cur.getDate()+1)}return c}
+const AVATAR_COLORS=[["#00D4B4","#000"],["#F5A623","#000"],["#3D8EF0","#fff"],["#FF4D5E","#fff"],["#A855F7","#fff"],["#10B981","#000"],["#F43F5E","#fff"],["#0EA5E9","#fff"]];
+function avatarColor(name){return AVATAR_COLORS[name.charCodeAt(0)%AVATAR_COLORS.length]}
 
-    // ─── theme ───────────────────────────────────────────────
-    const T = {
-      bg:"#0F1923", card:"#1A2736", card2:"#1E2F42",
-      primary:"#F1FAEE", secondary:"#8FA3B8",
-      accent:"#E63946", teal:"#2EC4B6", amber:"#FFB703",
-      red:"#E63946", blue:"#457B9D", orange:"#FB8500", success:"#2EC4B6",
-    };
+function useFirestoreData(){
+  const [data,setData]=useState({team:DEFAULT_TEAM,wfaDates:DEFAULT_WFA});
+  const [syncStatus,setSyncStatus]=useState("connecting");
+  const saveTimer=useRef(null);
+  const localData=useRef(data);
+  localData.current=data;
+  useEffect(()=>{
+    const fb=window.__firebase;if(!fb){setSyncStatus("offline");return;}
+    const{db,doc,onSnapshot,setDoc}=fb;
+    const ref=doc(db,"ibp-leave-monitor","data");
+    try{if(fb.db.app.options.apiKey==="PASTE_YOUR_API_KEY_HERE"){setSyncStatus("unconfigured");return;}}catch{}
+    setSyncStatus("connecting");
+    const unsub=onSnapshot(ref,snap=>{
+      if(snap.exists())setData(snap.data());
+      else setDoc(ref,{team:DEFAULT_TEAM,wfaDates:DEFAULT_WFA});
+      setSyncStatus("live");
+    },err=>{console.error(err);setSyncStatus("offline");});
+    return()=>unsub();
+  },[]);
+  const updateData=useCallback((next)=>{
+    const merged={...localData.current,...next};
+    setData(merged);setSyncStatus("saving");
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(async()=>{
+      try{const{db,doc,setDoc}=window.__firebase;await setDoc(doc(db,"ibp-leave-monitor","data"),merged);setSyncStatus("live");}
+      catch(e){console.error(e);setSyncStatus("offline");}
+    },700);
+  },[]);
+  return{data,updateData,syncStatus};
+}
 
-    // ════════════════════════════════════════════════════════
-    // FIREBASE HOOK — real-time sync with Firestore
-    // ════════════════════════════════════════════════════════
-    const FIRESTORE_DOC = "ibp-leave-monitor/data"; // collection/docId
+/* ── APP ── */
+function App(){
+  const{data,updateData,syncStatus}=useFirestoreData();
+  const[page,setPage]=useState("monitor");
+  const[selectedMonth,setSelectedMonth]=useState(()=>new Date().getMonth());
+  const[modalPerson,setModalPerson]=useState(null);
+  const[dayModal,setDayModal]=useState(null);
+  const[sidebarOpen,setSidebarOpen]=useState(true);
+  const today=new Date(),todayStr=fmt(today);
+  const{team,wfaDates}=data;
+  const onLeaveToday=team.filter(p=>isOnLeave(p,todayStr));
+  const availableToday=team.filter(p=>!isOnLeave(p,todayStr));
+  const nextHoliday=HOLIDAYS.find(h=>h.date>=todayStr);
+  const nextWFA=wfaDates.filter(d=>d>=todayStr)[0];
+  const syncMeta={live:{l:"Live",c:"var(--teal)"},saving:{l:"Menyimpan…",c:"var(--amber)"},offline:{l:"Offline",c:"var(--red)"},connecting:{l:"Connecting…",c:"var(--muted)"},unconfigured:{l:"Setup needed",c:"var(--red)"}}[syncStatus]||{l:"—",c:"var(--muted)"};
 
-    function useFirestoreData() {
-      const [data, setData]       = useState({ team: DEFAULT_TEAM, wfaDates: DEFAULT_WFA });
-      const [syncStatus, setSyncStatus] = useState("connecting"); // connecting | live | saving | offline | unconfigured
-      const saveTimeout = useRef(null);
+  const NAV=[
+    {id:"monitor",icon:"⬡",label:"Overview"},
+    {id:"timeline",icon:"▦",label:"Timeline"},
+    {id:"calendar",icon:"⊞",label:"Kalender"},
+    {id:"summary",icon:"◈",label:"Ringkasan"},
+    null,
+    {id:"cms-leaves",icon:"✈",label:"Data Cuti"},
+    {id:"cms-members",icon:"◉",label:"Anggota"},
+    {id:"cms-wfa",icon:"⌂",label:"WFA Dates"},
+  ];
 
-      useEffect(() => {
-        const fb = window.__firebase;
-        if (!fb) { setSyncStatus("offline"); return; }
+  return(
+    <div style={{display:"flex",minHeight:"100vh"}}>
+      {/* noise */}
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,opacity:.02,backgroundImage:"url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}}/>
 
-        // Check if config was filled in
-        const { db, doc, onSnapshot } = fb;
-        const ref = doc(db, "ibp-leave-monitor", "data");
-
-        // Check for placeholder config
-        try {
-          const app = db.app;
-          if (app.options.apiKey === "PASTE_YOUR_API_KEY_HERE") {
-            setSyncStatus("unconfigured");
-            return;
-          }
-        } catch {}
-
-        setSyncStatus("connecting");
-
-        // Real-time listener
-        const unsub = onSnapshot(
-          ref,
-          (snap) => {
-            if (snap.exists()) {
-              setData(snap.data());
-            } else {
-              // First time — seed Firestore with defaults
-              const { setDoc } = window.__firebase;
-              setDoc(ref, { team: DEFAULT_TEAM, wfaDates: DEFAULT_WFA });
-            }
-            setSyncStatus("live");
-          },
-          (err) => {
-            console.error("Firestore error:", err);
-            setSyncStatus("offline");
-          }
-        );
-
-        return () => unsub();
-      }, []);
-
-      // Debounced save to Firestore
-      const updateData = useCallback((next) => {
-        const merged = { ...data, ...next };
-        setData(merged); // optimistic local update
-        setSyncStatus("saving");
-
-        clearTimeout(saveTimeout.current);
-        saveTimeout.current = setTimeout(async () => {
-          try {
-            const { db, doc, setDoc } = window.__firebase;
-            await setDoc(doc(db, "ibp-leave-monitor", "data"), merged);
-            setSyncStatus("live");
-          } catch (e) {
-            console.error("Save failed:", e);
-            setSyncStatus("offline");
-          }
-        }, 600);
-      }, [data]);
-
-      return { data, updateData, syncStatus };
-    }
-
-    // ════════════════════════════════════════════════════════
-    // APP ROOT
-    // ════════════════════════════════════════════════════════
-    function App() {
-      const { data, updateData, syncStatus } = useFirestoreData();
-      const [activeTab, setActiveTab]   = useState("monitor");
-      const [view, setView]             = useState("timeline");
-      const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
-      const [hoveredDate, setHoveredDate]   = useState(null);
-      const [modalPerson, setModalPerson]   = useState(null);
-
-      const today    = new Date();
-      const todayStr = fmt(today);
-      const { team, wfaDates } = data;
-
-      const onLeaveToday   = team.filter(p => isOnLeave(p, todayStr));
-      const availableToday = team.filter(p => !isOnLeave(p, todayStr));
-      const nextHoliday    = HOLIDAYS.find(h => h.date >= todayStr);
-
-      const syncLabel = {
-        connecting:   "Menghubungkan...",
-        live:         "Live • Sinkron",
-        saving:       "Menyimpan...",
-        offline:      "Offline",
-        unconfigured: "Firebase belum dikonfigurasi",
-      }[syncStatus];
-
-      return (
-        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${T.bg} 0%,#162230 50%,#1A2736 100%)`,color:T.primary,fontFamily:"'Segoe UI','SF Pro Display',-apple-system,sans-serif"}}>
-          <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,pointerEvents:"none",backgroundImage:`radial-gradient(circle at 1px 1px,rgba(255,255,255,0.015) 1px,transparent 0)`,backgroundSize:"40px 40px",zIndex:0}}/>
-
-          {/* Unconfigured banner */}
-          {syncStatus === "unconfigured" && (
-            <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#FFB703",color:"#0F1923",padding:"10px 20px",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:10}}>
-              ⚠️ Firebase belum dikonfigurasi. Buka file HTML, temukan blok <code style={{background:"rgba(0,0,0,0.15)",padding:"1px 5px",borderRadius:4}}>firebaseConfig</code>, dan isi dengan kredensial dari Firebase Console.
-            </div>
-          )}
-
-          <div style={{position:"relative",zIndex:1,maxWidth:1400,margin:"0 auto",padding:`${syncStatus==="unconfigured"?"56px":"24px"} 20px 24px`}}>
-            <header style={{marginBottom:28}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-                    <div style={{width:8,height:32,borderRadius:4,background:`linear-gradient(180deg,${T.accent},${T.amber})`}}/>
-                    <h1 style={{fontSize:26,fontWeight:800,margin:0,letterSpacing:"-0.5px",background:`linear-gradient(135deg,${T.primary},${T.teal})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
-                      IBP Leave Monitor
-                    </h1>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",margin:"4px 0 0 20px",gap:14}}>
-                    <p style={{color:T.secondary,fontSize:12,margin:0}}>
-                      Telkom Indonesia — EBIS Partner &nbsp;·&nbsp; {fmtFull(today)}
-                    </p>
-                    {/* Sync indicator */}
-                    <div style={{display:"flex",alignItems:"center",fontSize:11,color:syncStatus==="live"?T.teal:syncStatus==="saving"?T.amber:syncStatus==="offline"||syncStatus==="unconfigured"?T.red:T.secondary}}>
-                      <span className={`sync-dot ${syncStatus==="live"?"live":syncStatus==="saving"?"saving":"offline"}`}/>
-                      {syncLabel}
-                    </div>
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.04)",borderRadius:10,padding:4}}>
-                  {[["monitor","📊 Monitor"],["cms","⚙️ CMS"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>setActiveTab(v)} style={{
-                      padding:"8px 20px",borderRadius:7,border:"none",
-                      background:activeTab===v?T.teal:"transparent",
-                      color:activeTab===v?T.bg:T.secondary,
-                      fontWeight:activeTab===v?700:500,fontSize:13,cursor:"pointer",transition:"all 0.2s"
-                    }}>{l}</button>
-                  ))}
-                </div>
-              </div>
-            </header>
-
-            {activeTab==="monitor" ? (
-              <MonitorTab
-                team={team} wfaDates={wfaDates} today={today} todayStr={todayStr}
-                onLeaveToday={onLeaveToday} availableToday={availableToday} nextHoliday={nextHoliday}
-                view={view} setView={setView}
-                selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth}
-                hoveredDate={hoveredDate} setHoveredDate={setHoveredDate}
-                modalPerson={modalPerson} setModalPerson={setModalPerson}
-              />
-            ) : (
-              <CMSTab team={team} wfaDates={wfaDates} updateData={updateData} todayStr={todayStr}/>
-            )}
+      {/* SIDEBAR */}
+      <aside style={{width:sidebarOpen?216:56,flexShrink:0,background:"linear-gradient(180deg,var(--bg2),var(--bg))",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",zIndex:20,transition:"width .25s ease",overflow:"hidden"}}>
+        <div style={{padding:"18px 12px 14px",borderBottom:"1px solid var(--border)",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:30,height:30,borderRadius:8,background:"linear-gradient(135deg,var(--teal),#0088AA)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,fontFamily:"var(--font-mono)",fontWeight:500}}>⬡</div>
+            {sidebarOpen&&<div style={{overflow:"hidden"}}>
+              <div style={{fontFamily:"var(--font-mono)",fontWeight:500,fontSize:12,color:"var(--text)",whiteSpace:"nowrap"}}>IBP Monitor</div>
+              <div style={{fontSize:9,color:"var(--muted)",marginTop:1,whiteSpace:"nowrap"}}>EBIS Partner · ITD</div>
+            </div>}
           </div>
         </div>
-      );
-    }
-
-    // ════════════════════════════════════════════════════════
-    // MONITOR TAB (unchanged from original)
-    // ════════════════════════════════════════════════════════
-    function MonitorTab({ team, wfaDates, today, todayStr, onLeaveToday, availableToday, nextHoliday, view, setView, selectedMonth, setSelectedMonth, hoveredDate, setHoveredDate, modalPerson, setModalPerson }) {
-      const monthDates = useMemo(()=>getMonthDates(today.getFullYear(),selectedMonth),[selectedMonth]);
-      return (
-        <>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12,marginBottom:24}}>
-            <StatCard icon="🟢" label="Hadir Hari Ini" value={availableToday.length} sub={`dari ${team.length} anggota`} accent={T.teal}/>
-            <StatCard icon="✈️" label="Cuti Hari Ini" value={onLeaveToday.length} sub={onLeaveToday.map(p=>p.name).join(", ")||"—"} accent={T.orange}/>
-            <StatCard icon="🏖️" label="Libur Berikutnya" value={nextHoliday?fmtShort(parseDate(nextHoliday.date)):"—"} sub={nextHoliday?.name||""} accent={T.red}/>
-            <StatCard icon="🏠" label="WFA Berikutnya" value={wfaDates.filter(d=>d>=todayStr).length>0?fmtShort(parseDate(wfaDates.filter(d=>d>=todayStr)[0])):"—"} sub="Work From Anywhere" accent={T.blue}/>
+        {sidebarOpen&&<div style={{padding:"7px 12px",borderBottom:"1px solid var(--border)",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:syncMeta.c,fontFamily:"var(--font-mono)"}}>
+            <span className={`dot ${syncStatus}`}/>{syncMeta.l}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap",justifyContent:"space-between"}}>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <span style={{color:T.secondary,fontSize:12,alignSelf:"center",marginRight:4}}>Bulan:</span>
+        </div>}
+        <nav style={{padding:"8px 6px",flex:1,overflow:"auto"}}>
+          {NAV.map((item,i)=>{
+            if(!item)return<div key={`s${i}`} style={{height:1,background:"var(--border)",margin:"6px 0"}}/>;
+            const active=page===item.id;
+            return(
+              <button key={item.id} onClick={()=>setPage(item.id)} title={!sidebarOpen?item.label:""}
+                className={`nav-btn${active?" active":""}`}
+                style={{fontFamily:"var(--font-ui)"}}>
+                <span style={{fontSize:13,flexShrink:0,fontFamily:"var(--font-mono)",width:22,textAlign:"center"}}>{item.icon}</span>
+                {sidebarOpen&&<><span style={{fontSize:12,fontWeight:active?600:400,whiteSpace:"nowrap",flex:1}}>{item.label}</span>
+                {active&&<span style={{width:4,height:4,borderRadius:2,background:"var(--teal)",flexShrink:0}}/>}</>}
+              </button>
+            );
+          })}
+        </nav>
+        <div style={{padding:6,borderTop:"1px solid var(--border)",flexShrink:0}}>
+          <button className="btn-icon" onClick={()=>setSidebarOpen(v=>!v)} style={{width:"100%",height:30,justifyContent:"center"}}>
+            <span style={{fontSize:11,fontFamily:"var(--font-mono)",transform:sidebarOpen?"none":"rotate(180deg)",display:"inline-block",transition:"transform .25s"}}>◀</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN */}
+      <main style={{flex:1,minWidth:0,display:"flex",flexDirection:"column"}}>
+        <header style={{padding:"12px 24px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(8,14,20,0.85)",backdropFilter:"blur(16px)",position:"sticky",top:0,zIndex:10,flexShrink:0}}>
+          <div>
+            <h1 style={{fontFamily:"var(--font-mono)",fontSize:14,fontWeight:500,color:"var(--text)"}}>{NAV.find(n=>n&&n.id===page)?.label}</h1>
+            <div style={{fontSize:10,color:"var(--muted)",marginTop:1,fontFamily:"var(--font-mono)"}}>{fmtFull(today)}</div>
+          </div>
+          {["timeline","calendar","summary"].includes(page)&&(
+            <div style={{display:"flex",gap:3,background:"rgba(255,255,255,0.03)",borderRadius:8,padding:3,border:"1px solid var(--border)"}}>
               {MONTHS_ID.map((m,i)=>(
-                <button key={i} onClick={()=>setSelectedMonth(i)} style={{
-                  padding:"4px 10px",borderRadius:6,border:"none",
-                  background:selectedMonth===i?T.accent:"rgba(255,255,255,0.04)",
-                  color:selectedMonth===i?"#fff":T.secondary,
-                  fontWeight:selectedMonth===i?700:400,fontSize:12,cursor:"pointer"
-                }}>{m.slice(0,3)}</button>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:6}}>
-              {[["timeline","⏳"],["calendar","📅"],["summary","📋"]].map(([v,icon])=>(
-                <button key={v} onClick={()=>setView(v)} style={{
-                  padding:"6px 14px",borderRadius:7,border:"none",
-                  background:view===v?T.teal:"rgba(255,255,255,0.05)",
-                  color:view===v?T.bg:T.secondary,
-                  fontWeight:view===v?700:500,fontSize:12,cursor:"pointer"
-                }}>{icon} {v.charAt(0).toUpperCase()+v.slice(1)}</button>
-              ))}
-            </div>
-          </div>
-          {view==="timeline" && <TimelineView dates={monthDates} team={team} wfaDates={wfaDates} todayStr={todayStr} hoveredDate={hoveredDate} setHoveredDate={setHoveredDate} setModalPerson={setModalPerson}/>}
-          {view==="calendar" && <CalendarView year={today.getFullYear()} month={selectedMonth} team={team} wfaDates={wfaDates} todayStr={todayStr}/>}
-          {view==="summary" && <SummaryView team={team} wfaDates={wfaDates} todayStr={todayStr} selectedMonth={selectedMonth} year={today.getFullYear()}/>}
-          {modalPerson && <PersonModal person={team.find(p=>p.name===modalPerson)} todayStr={todayStr} onClose={()=>setModalPerson(null)}/>}
-          <div style={{marginTop:24,padding:"14px 18px",borderRadius:12,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.05)",display:"flex",flexWrap:"wrap",gap:18,alignItems:"center"}}>
-            <span style={{fontSize:11,fontWeight:700,color:T.secondary}}>KETERANGAN:</span>
-            <Legend color={T.red} label="Libur Nasional"/>
-            <Legend color={T.amber} label="Cuti Besar (Cubes)"/>
-            <Legend color={T.orange} label="Cuti Personal"/>
-            <Legend color={T.blue} label="WFA"/>
-            <Legend color={T.teal} label="Hari Ini"/>
-          </div>
-        </>
-      );
-    }
-
-    // ════════════════════════════════════════════════════════
-    // CMS TAB
-    // ════════════════════════════════════════════════════════
-    function CMSTab({ team, wfaDates, updateData, todayStr }) {
-      const [cmsView, setCmsView]         = useState("leaves");
-      const [editingLeave, setEditingLeave]   = useState(null);
-      const [editingMember, setEditingMember] = useState(null);
-      const [confirmDelete, setConfirmDelete] = useState(null);
-      const [toast, setToast]             = useState(null);
-
-      function showToast(msg, ok=true) { setToast({msg,ok}); setTimeout(()=>setToast(null),2500); }
-
-      function saveLeave(personId, leave) {
-        const nextTeam = team.map(p => {
-          if(p.id!==personId) return p;
-          const exists = p.leaves.find(l=>l.id===leave.id);
-          const nextLeaves = exists ? p.leaves.map(l=>l.id===leave.id?leave:l) : [...p.leaves,{...leave,id:Date.now()}];
-          return {...p,leaves:nextLeaves};
-        });
-        updateData({team:nextTeam}); setEditingLeave(null); showToast("Cuti berhasil disimpan ✓");
-      }
-      function deleteLeave(personId, leaveId) {
-        const nextTeam = team.map(p=>p.id!==personId?p:{...p,leaves:p.leaves.filter(l=>l.id!==leaveId)});
-        updateData({team:nextTeam}); setConfirmDelete(null); showToast("Cuti dihapus");
-      }
-      function saveMember(member) {
-        const exists = team.find(p=>p.id===member.id);
-        const nextTeam = exists ? team.map(p=>p.id===member.id?{...p,name:member.name}:p) : [...team,{id:Date.now(),name:member.name,leaves:[]}];
-        updateData({team:nextTeam}); setEditingMember(null); showToast("Anggota disimpan ✓");
-      }
-      function deleteMember(id) { updateData({team:team.filter(p=>p.id!==id)}); setConfirmDelete(null); showToast("Anggota dihapus"); }
-      function addWFA(dateStr) { if(!dateStr||wfaDates.includes(dateStr)) return; updateData({wfaDates:[...wfaDates,dateStr].sort()}); showToast("WFA date ditambahkan ✓"); }
-      function removeWFA(dateStr) { updateData({wfaDates:wfaDates.filter(d=>d!==dateStr)}); showToast("WFA date dihapus"); }
-
-      return (
-        <div>
-          {toast&&(
-            <div style={{position:"fixed",top:24,right:24,zIndex:999,background:toast.ok?T.teal:T.accent,color:T.bg,padding:"10px 20px",borderRadius:10,fontWeight:700,fontSize:13,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",animation:"fadeIn 0.2s ease"}}>
-              {toast.msg}
-            </div>
-          )}
-          <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.04)",borderRadius:10,padding:4,marginBottom:20,width:"fit-content"}}>
-            {[["leaves","✈️ Data Cuti"],["members","👥 Anggota"],["wfa","🏠 WFA Dates"]].map(([v,l])=>(
-              <button key={v} onClick={()=>setCmsView(v)} style={{padding:"7px 16px",borderRadius:7,border:"none",background:cmsView===v?"rgba(255,255,255,0.1)":"transparent",color:cmsView===v?T.primary:T.secondary,fontWeight:cmsView===v?700:400,fontSize:13,cursor:"pointer"}}>{l}</button>
-            ))}
-          </div>
-
-          {cmsView==="leaves"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              {team.map(person=>(
-                <div key={person.id} style={{background:T.card,borderRadius:14,padding:20,border:"1px solid rgba(255,255,255,0.06)"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${T.blue},${T.teal})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14}}>
-                        {person.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
-                      </div>
-                      <div>
-                        <div style={{fontWeight:700,fontSize:15}}>{person.name}</div>
-                        <div style={{fontSize:11,color:T.secondary}}>{person.leaves.length} entri cuti</div>
-                      </div>
-                    </div>
-                    <button onClick={()=>setEditingLeave({personId:person.id,isNew:true})} style={btnStyle(T.teal)}>+ Tambah Cuti</button>
-                  </div>
-                  {person.leaves.length===0?(
-                    <div style={{fontSize:12,color:T.secondary,padding:"8px 0",fontStyle:"italic"}}>Belum ada cuti terdaftar.</div>
-                  ):(
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {person.leaves.map(l=>{
-                        const start=parseDate(l.start),end=parseDate(l.end);
-                        const days=Math.round((end-start)/86400000)+1;
-                        const active=todayStr>=l.start&&todayStr<=l.end;
-                        return (
-                          <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:10,background:"rgba(255,255,255,0.03)",border:`1px solid ${active?"rgba(251,133,0,0.3)":"rgba(255,255,255,0.06)"}`,borderLeft:`3px solid ${l.type==="cubes"?T.amber:T.orange}`}}>
-                            <div style={{flex:1}}>
-                              <div style={{fontSize:13,fontWeight:600}}>
-                                {fmtShort(start)} — {fmtShort(end)}
-                                {active&&<span style={{marginLeft:8,fontSize:10,background:T.orange,color:"#fff",padding:"1px 6px",borderRadius:4,fontWeight:700}}>AKTIF</span>}
-                              </div>
-                              <div style={{fontSize:11,color:T.secondary,marginTop:2}}>
-                                {days} hari · {l.type==="cubes"?"Cuti Besar":"Cuti Personal"}
-                                {l.note&&<span style={{color:T.amber}}> · {l.note}</span>}
-                              </div>
-                            </div>
-                            <button onClick={()=>setEditingLeave({personId:person.id,leaveId:l.id,leave:l})} style={iconBtn(T.blue)}>✏️</button>
-                            <button onClick={()=>setConfirmDelete({type:"leave",payload:{personId:person.id,leaveId:l.id},label:`cuti ${fmtShort(start)}–${fmtShort(end)} untuk ${person.name}`})} style={iconBtn(T.red)}>🗑️</button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <button key={i} onClick={()=>setSelectedMonth(i)} style={{padding:"3px 8px",borderRadius:5,border:"none",cursor:"pointer",background:selectedMonth===i?"var(--teal)":"transparent",color:selectedMonth===i?"#000":"var(--muted)",fontFamily:"var(--font-ui)",fontSize:10,fontWeight:selectedMonth===i?700:400,transition:"all .1s"}}>
+                  {m.slice(0,3)}
+                </button>
               ))}
             </div>
           )}
+        </header>
 
-          {cmsView==="members"&&(
-            <div>
-              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-                <button onClick={()=>setEditingMember({id:null,name:"",isNew:true})} style={btnStyle(T.teal)}>+ Tambah Anggota</button>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
-                {team.map(p=>(
-                  <div key={p.id} style={{background:T.card,borderRadius:12,padding:16,border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{width:40,height:40,borderRadius:10,background:`linear-gradient(135deg,${T.blue},${T.teal})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:15,flexShrink:0}}>
-                      {p.name.split(" ").map(w=>w[0]).slice(0,2).join("")}
-                    </div>
+        <div style={{flex:1,padding:"22px 24px",overflow:"auto"}}>
+          {page==="monitor"   &&<OverviewPage team={team} wfaDates={wfaDates} todayStr={todayStr} today={today} onLeaveToday={onLeaveToday} availableToday={availableToday} nextHoliday={nextHoliday} nextWFA={nextWFA} setModalPerson={setModalPerson}/>}
+          {page==="timeline"  &&<TimelinePage team={team} wfaDates={wfaDates} todayStr={todayStr} today={today} selectedMonth={selectedMonth}/>}
+          {page==="calendar"  &&<CalendarPage team={team} wfaDates={wfaDates} todayStr={todayStr} today={today} selectedMonth={selectedMonth} setDayModal={setDayModal}/>}
+          {page==="summary"   &&<SummaryPage  team={team} wfaDates={wfaDates} todayStr={todayStr} today={today} selectedMonth={selectedMonth}/>}
+          {page==="cms-leaves"  &&<CMSLeaves  team={team} updateData={updateData} todayStr={todayStr}/>}
+          {page==="cms-members" &&<CMSMembers team={team} updateData={updateData}/>}
+          {page==="cms-wfa"     &&<CMSWfa     wfaDates={wfaDates} updateData={updateData} todayStr={todayStr}/>}
+        </div>
+      </main>
+
+      {modalPerson&&<PersonModal person={team.find(p=>p.name===modalPerson)} todayStr={todayStr} onClose={()=>setModalPerson(null)}/>}
+      {dayModal&&<DayModal date={dayModal} team={team} wfaDates={wfaDates} onClose={()=>setDayModal(null)}/>}
+    </div>
+  );
+}
+
+/* ── OVERVIEW ── */
+function OverviewPage({team,wfaDates,todayStr,today,onLeaveToday,availableToday,nextHoliday,nextWFA,setModalPerson}){
+  const pct=Math.round((availableToday.length/team.length)*100);
+  // upcoming in 7 days
+  const upcoming=[];
+  for(const p of team){for(const l of p.leaves){const diff=Math.round((parseDate(l.start)-new Date())/86400000);if(diff>0&&diff<=7)upcoming.push({p,l,diff});}}
+  upcoming.sort((a,b)=>a.l.start.localeCompare(b.l.start));
+  return(
+    <div className="stagger" style={{display:"flex",flexDirection:"column",gap:16}}>
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+        {[
+          {label:"Hadir Hari Ini",value:availableToday.length,suffix:`/ ${team.length}`,sub:`${pct}% tim tersedia`,accent:"var(--teal)",bar:pct,icon:"◉"},
+          {label:"Sedang Cuti",value:onLeaveToday.length,suffix:"orang",sub:onLeaveToday.map(p=>p.name.split(" ")[0]).join(", ")||"Tidak ada",accent:"var(--orange)",icon:"✈"},
+          {label:"Libur Berikutnya",value:nextHoliday?fmtShort(parseDate(nextHoliday.date)):"—",sub:nextHoliday?.name||"Tidak ada",accent:"var(--red)",icon:"⊘"},
+          {label:"WFA Berikutnya",value:nextWFA?fmtShort(parseDate(nextWFA)):"—",sub:"Work From Anywhere",accent:"var(--blue)",icon:"⌂"},
+        ].map(k=>(
+          <div key={k.label} className="glass" style={{borderRadius:13,padding:18,position:"relative",overflow:"hidden"}}>
+            {k.bar!==undefined&&<div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:"var(--border)"}}>
+              <div style={{height:"100%",width:`${k.bar}%`,background:k.accent,transition:"width .6s ease"}}/>
+            </div>}
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+              <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--font-mono)",letterSpacing:".04em"}}>{k.label.toUpperCase()}</span>
+              <span style={{fontSize:14,color:k.accent,fontFamily:"var(--font-mono)"}}>{k.icon}</span>
+            </div>
+            <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:4}}>
+              <span style={{fontSize:30,fontWeight:800,color:k.accent,fontFamily:"var(--font-mono)",lineHeight:1}}>{k.value}</span>
+              {k.suffix&&<span style={{fontSize:12,color:"var(--muted)"}}>{k.suffix}</span>}
+            </div>
+            <div style={{fontSize:10,color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Roster */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {[{title:"HADIR",color:"var(--teal)",people:availableToday,status:"available"},{title:"CUTI",color:"var(--orange)",people:onLeaveToday,status:"leave"}].map(({title,color,people,status})=>(
+          <div key={title} className="glass" style={{borderRadius:13,padding:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+              <span style={{fontFamily:"var(--font-mono)",fontSize:10,color,fontWeight:500,letterSpacing:".06em"}}>{title}</span>
+              <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--muted)"}}>{people.length} orang</span>
+            </div>
+            {people.length===0?<div style={{fontSize:11,color:"var(--muted)",textAlign:"center",padding:"20px 0",fontStyle:"italic"}}>Semua hadir 🎉</div>
+            :<div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {people.map(p=>{
+                const[bg,fg]=avatarColor(p.name);
+                const l=status==="leave"?getLeaveForDate(p,todayStr):null;
+                return(
+                  <div key={p.id} onClick={()=>setModalPerson(p.name)} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 9px",borderRadius:8,cursor:"pointer",background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",transition:"background .1s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"}
+                    onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}>
+                    <div style={{width:28,height:28,borderRadius:7,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:9,flexShrink:0,fontFamily:"var(--font-mono)"}}>{initials(p.name)}</div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
-                      <div style={{fontSize:11,color:T.secondary}}>{p.leaves.length} cuti</div>
+                      <div style={{fontSize:11,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                      {l&&<div style={{fontSize:9,color:"var(--muted)",marginTop:1}}>s/d {fmtShort(parseDate(l.end))}</div>}
                     </div>
-                    <div style={{display:"flex",gap:4}}>
-                      <button onClick={()=>setEditingMember({id:p.id,name:p.name})} style={iconBtn(T.blue)}>✏️</button>
-                      <button onClick={()=>setConfirmDelete({type:"member",payload:{id:p.id},label:p.name})} style={iconBtn(T.red)}>🗑️</button>
-                    </div>
+                    <div style={{width:5,height:5,borderRadius:50,background:color,flexShrink:0}}/>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {cmsView==="wfa"&&<WFAEditor wfaDates={wfaDates} addWFA={addWFA} removeWFA={removeWFA}/>}
-
-          {editingLeave&&<LeaveFormModal personId={editingLeave.personId} personName={team.find(p=>p.id===editingLeave.personId)?.name} leave={editingLeave.leave} isNew={editingLeave.isNew} onSave={saveLeave} onClose={()=>setEditingLeave(null)}/>}
-          {editingMember&&<MemberFormModal member={editingMember} onSave={saveMember} onClose={()=>setEditingMember(null)}/>}
-          {confirmDelete&&<ConfirmModal label={confirmDelete.label} onConfirm={()=>{if(confirmDelete.type==="leave")deleteLeave(confirmDelete.payload.personId,confirmDelete.payload.leaveId);else deleteMember(confirmDelete.payload.id);}} onClose={()=>setConfirmDelete(null)}/>}
-        </div>
-      );
-    }
-
-    // ─── WFA Editor ──────────────────────────────────────────
-    function WFAEditor({ wfaDates, addWFA, removeWFA }) {
-      const [newDate, setNewDate] = useState("");
-      return (
-        <div style={{background:T.card,borderRadius:14,padding:24,border:"1px solid rgba(255,255,255,0.06)",maxWidth:520}}>
-          <h3 style={{margin:"0 0 16px",fontSize:15,fontWeight:700}}>🏠 WFA Dates</h3>
-          <div style={{display:"flex",gap:8,marginBottom:20}}>
-            <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} style={{...inputStyle,flex:1}}/>
-            <button onClick={()=>{addWFA(newDate);setNewDate("");}} style={btnStyle(T.teal)}>Tambah</button>
+                );
+              })}
+            </div>}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {wfaDates.length===0&&<p style={{color:T.secondary,fontSize:12}}>Belum ada WFA date.</p>}
-            {wfaDates.map(d=>(
-              <div key={d} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:10,background:"rgba(69,123,157,0.1)",borderLeft:`3px solid ${T.blue}`}}>
-                <span style={{fontSize:13,fontWeight:600}}>{fmtFull(parseDate(d))}</span>
-                <button onClick={()=>removeWFA(d)} style={iconBtn(T.red)}>🗑️</button>
-              </div>
-            ))}
+        ))}
+      </div>
+
+      {/* Upcoming */}
+      {upcoming.length>0&&(
+        <div className="glass" style={{borderRadius:13,padding:18}}>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--amber)",fontWeight:500,letterSpacing:".06em",marginBottom:12}}>CUTI DIMULAI DALAM 7 HARI</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+            {upcoming.map(({p,l,diff},i)=>{
+              const[bg,fg]=avatarColor(p.name);
+              return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderRadius:9,background:"var(--amber-dim)",border:"1px solid rgba(245,166,35,.15)"}}>
+                  <div style={{width:28,height:28,borderRadius:7,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:9,fontFamily:"var(--font-mono)",flexShrink:0}}>{initials(p.name)}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                    <div style={{fontSize:9,color:"var(--amber)",marginTop:1}}>Mulai {fmtShort(parseDate(l.start))} · {diff}h lagi</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      );
-    }
+      )}
+    </div>
+  );
+}
 
-    // ─── Modals ───────────────────────────────────────────────
-    function LeaveFormModal({ personId, personName, leave, isNew, onSave, onClose }) {
-      const [form, setForm] = useState({ id:leave?.id||Date.now(), start:leave?.start||"", end:leave?.end||"", type:leave?.type||"cuti", note:leave?.note||"" });
-      const [err, setErr]   = useState("");
-      function handleSave() {
-        if(!form.start||!form.end) { setErr("Tanggal mulai dan selesai wajib diisi."); return; }
-        if(form.start>form.end) { setErr("Tanggal selesai harus setelah tanggal mulai."); return; }
-        onSave(personId, form);
-      }
-      return (
-        <Overlay onClose={onClose}>
-          <h2 style={{margin:"0 0 4px",fontSize:20,fontWeight:800}}>{isNew?"Tambah Cuti":"Edit Cuti"}</h2>
-          <p style={{color:T.secondary,fontSize:13,marginBottom:20}}>{personName}</p>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <label style={labelStyle}>Mulai<input type="date" value={form.start} onChange={e=>setForm({...form,start:e.target.value})} style={inputStyle}/></label>
-              <label style={labelStyle}>Selesai<input type="date" value={form.end} onChange={e=>setForm({...form,end:e.target.value})} style={inputStyle}/></label>
-            </div>
-            <label style={labelStyle}>Jenis Cuti
-              <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} style={inputStyle}>
-                <option value="cuti">Cuti Personal</option>
-                <option value="cubes">Cuti Besar (Cubes)</option>
-              </select>
-            </label>
-            <label style={labelStyle}>Catatan (opsional)<input type="text" value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="e.g. Masuk 18 Mei" style={inputStyle}/></label>
-            {err&&<div style={{fontSize:12,color:T.red,background:"rgba(230,57,70,0.1)",padding:"8px 12px",borderRadius:8}}>{err}</div>}
-            {form.start&&form.end&&form.start<=form.end&&<div style={{fontSize:12,color:T.teal,background:"rgba(46,196,182,0.08)",padding:"8px 12px",borderRadius:8}}>Durasi: {Math.round((parseDate(form.end)-parseDate(form.start))/86400000)+1} hari kalender</div>}
-          </div>
-          <div style={{display:"flex",gap:8,marginTop:24,justifyContent:"flex-end"}}>
-            <button onClick={onClose} style={btnStyle("rgba(255,255,255,0.06)",T.secondary)}>Batal</button>
-            <button onClick={handleSave} style={btnStyle(T.teal)}>💾 Simpan</button>
-          </div>
-        </Overlay>
-      );
-    }
-    function MemberFormModal({ member, onSave, onClose }) {
-      const [name, setName] = useState(member.name||"");
-      return (
-        <Overlay onClose={onClose}>
-          <h2 style={{margin:"0 0 20px",fontSize:20,fontWeight:800}}>{member.isNew?"Tambah Anggota":"Edit Nama"}</h2>
-          <label style={labelStyle}>Nama Anggota<input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Bu Tamie" style={inputStyle}/></label>
-          <div style={{display:"flex",gap:8,marginTop:20,justifyContent:"flex-end"}}>
-            <button onClick={onClose} style={btnStyle("rgba(255,255,255,0.06)",T.secondary)}>Batal</button>
-            <button onClick={()=>{if(name.trim())onSave({id:member.id,name:name.trim()})}} style={btnStyle(T.teal)}>💾 Simpan</button>
-          </div>
-        </Overlay>
-      );
-    }
-    function ConfirmModal({ label, onConfirm, onClose }) {
-      return (
-        <Overlay onClose={onClose}>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:16}}>🗑️</div>
-            <h2 style={{margin:"0 0 8px",fontSize:18,fontWeight:700}}>Hapus?</h2>
-            <p style={{color:T.secondary,fontSize:13,marginBottom:24}}>Yakin ingin menghapus <strong style={{color:T.primary}}>{label}</strong>? Tindakan ini tidak dapat dibatalkan.</p>
-            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-              <button onClick={onClose} style={btnStyle("rgba(255,255,255,0.06)",T.secondary)}>Batal</button>
-              <button onClick={onConfirm} style={btnStyle(T.red)}>Hapus</button>
-            </div>
-          </div>
-        </Overlay>
-      );
-    }
-    function Overlay({ children, onClose }) {
-      return (
-        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}} onClick={onClose}>
-          <div style={{background:T.card,borderRadius:16,padding:32,maxWidth:480,width:"90%",border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
-            {children}
-          </div>
-        </div>
-      );
-    }
-    function PersonModal({ person, todayStr, onClose }) {
-      if(!person) return null;
-      return (
-        <Overlay onClose={onClose}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-            <h2 style={{margin:0,fontSize:20,fontWeight:800}}>{person.name}</h2>
-            <button onClick={onClose} style={{background:"rgba(255,255,255,0.06)",border:"none",color:T.secondary,width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:16}}>✕</button>
-          </div>
-          {person.leaves.length===0
-            ?<p style={{color:T.secondary}}>Tidak ada jadwal cuti.</p>
-            :person.leaves.map(l=>{
-                const s=parseDate(l.start),e=parseDate(l.end);
-                return (<div key={l.id} style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"14px 18px",borderLeft:`3px solid ${l.type==="cubes"?T.amber:T.orange}`,marginBottom:10}}>
-                  <div style={{fontWeight:600,fontSize:14,marginBottom:4}}>{fmtShort(s)} — {fmtShort(e)}</div>
-                  <div style={{color:T.secondary,fontSize:12}}>{Math.round((e-s)/86400000)+1} hari · {l.type==="cubes"?"Cuti Besar":"Cuti Personal"}{l.note&&<span style={{color:T.amber}}> · {l.note}</span>}</div>
-                </div>);
-              })
-          }
-          <div style={{marginTop:16,padding:"10px 14px",borderRadius:8,background:isOnLeave(person,todayStr)?"rgba(251,133,0,0.12)":"rgba(46,196,182,0.12)",border:`1px solid ${isOnLeave(person,todayStr)?"rgba(251,133,0,0.25)":"rgba(46,196,182,0.25)"}`}}>
-            <span style={{fontSize:13,fontWeight:600}}>{isOnLeave(person,todayStr)?"✈️ Sedang cuti hari ini":"🟢 Tersedia hari ini"}</span>
-          </div>
-        </Overlay>
-      );
-    }
-
-    // ─── Timeline ─────────────────────────────────────────────
-    function TimelineView({ dates, team, wfaDates, todayStr, hoveredDate, setHoveredDate, setModalPerson }) {
-      return (
-        <div style={{background:T.card,borderRadius:16,border:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
-          <div style={{overflowX:"auto"}}>
-            <table style={{borderCollapse:"collapse",width:"100%",minWidth:dates.length*36+140}}>
-              <thead>
-                <tr>
-                  <th style={{position:"sticky",left:0,zIndex:10,background:"#1E3045",padding:"10px 14px",textAlign:"left",fontSize:12,color:T.secondary,fontWeight:600,borderBottom:"1px solid rgba(255,255,255,0.06)",minWidth:130}}>Nama</th>
-                  {dates.map(d=>{
-                    const ds=fmt(d),hol=isHoliday(ds),wfa=wfaDates.includes(ds),isToday=ds===todayStr,we=isWeekend(d);
-                    return (<th key={ds} onMouseEnter={()=>setHoveredDate(ds)} onMouseLeave={()=>setHoveredDate(null)} style={{padding:"6px 1px",textAlign:"center",borderBottom:"1px solid rgba(255,255,255,0.06)",background:isToday?"rgba(46,196,182,0.12)":hol?"rgba(230,57,70,0.08)":wfa?"rgba(69,123,157,0.08)":we?"rgba(255,255,255,0.02)":"transparent",minWidth:32}}>
-                      <div style={{fontSize:9,color:we?"rgba(255,255,255,0.2)":T.secondary}}>{DAYS_ID[d.getDay()]}</div>
-                      <div style={{fontSize:11,fontWeight:isToday?800:500,color:isToday?T.teal:hol?T.red:we?"rgba(255,255,255,0.2)":T.primary}}>{d.getDate()}</div>
-                      {hol&&<div style={{width:4,height:4,borderRadius:2,background:T.red,margin:"2px auto 0"}}/>}
-                      {wfa&&!hol&&<div style={{width:4,height:4,borderRadius:2,background:T.blue,margin:"2px auto 0"}}/>}
-                    </th>);
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {team.map((person,pi)=>(
-                  <tr key={person.id} style={{borderBottom:"1px solid rgba(255,255,255,0.03)"}}>
-                    <td onClick={()=>setModalPerson(person.name)} style={{position:"sticky",left:0,zIndex:5,background:pi%2===0?T.card:"rgba(255,255,255,0.015)",padding:"9px 14px",fontSize:13,fontWeight:600,cursor:"pointer",color:isOnLeave(person,todayStr)?T.orange:T.primary,whiteSpace:"nowrap"}}>
-                      <span style={{marginRight:6,fontSize:10}}>{isOnLeave(person,todayStr)?"✈️":"🟢"}</span>{person.name}
+/* ── TIMELINE ── */
+function TimelinePage({team,wfaDates,todayStr,today,selectedMonth}){
+  const[hovered,setHovered]=useState(null);
+  const[modalPerson,setModalPerson]=useState(null);
+  const dates=useMemo(()=>getMonthDates(today.getFullYear(),selectedMonth),[selectedMonth]);
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <div className="glass" style={{borderRadius:13,overflow:"hidden"}}>
+        <div style={{overflowX:"auto"}}>
+          <table style={{borderCollapse:"collapse",width:"100%",minWidth:dates.length*32+155}}>
+            <thead>
+              <tr style={{background:"rgba(0,0,0,0.25)"}}>
+                <th style={{position:"sticky",left:0,zIndex:10,background:"#0A1520",padding:"9px 14px",textAlign:"left",fontSize:10,color:"var(--muted)",fontFamily:"var(--font-mono)",fontWeight:500,borderBottom:"1px solid var(--border)",minWidth:145,letterSpacing:".05em"}}>NAMA</th>
+                {dates.map(d=>{
+                  const ds=fmt(d),hol=isHoliday(ds),wfa=wfaDates.includes(ds),isToday=ds===todayStr,we=isWeekend(d);
+                  return(
+                    <th key={ds} onMouseEnter={()=>setHovered(ds)} onMouseLeave={()=>setHovered(null)} style={{padding:"5px 1px",textAlign:"center",borderBottom:"1px solid var(--border)",minWidth:28,background:isToday?"rgba(0,212,180,0.1)":hol?"rgba(255,77,94,0.05)":wfa?"rgba(61,142,240,0.05)":we?"rgba(255,255,255,0.01)":"transparent",cursor:"default"}}>
+                      <div style={{fontSize:8,color:we?"var(--muted2)":"var(--muted)",fontFamily:"var(--font-mono)"}}>{DAYS_ID[d.getDay()]}</div>
+                      <div style={{fontSize:10,fontWeight:isToday?700:400,color:isToday?"var(--teal)":hol?"var(--red)":we?"var(--muted2)":"var(--text)",fontFamily:"var(--font-mono)"}}>{d.getDate()}</div>
+                      <div style={{height:4,display:"flex",justifyContent:"center",gap:2,marginTop:1}}>
+                        {hol&&<div style={{width:3,height:3,borderRadius:50,background:"var(--red)"}}/>}
+                        {wfa&&!hol&&<div style={{width:3,height:3,borderRadius:50,background:"var(--blue)"}}/>}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {team.map((person,pi)=>{
+                const[bg,fg]=avatarColor(person.name);
+                return(
+                  <tr key={person.id} style={{borderBottom:"1px solid rgba(255,255,255,0.02)"}}>
+                    <td onClick={()=>setModalPerson(person.name)} style={{position:"sticky",left:0,zIndex:5,background:pi%2===0?"#0A1520":"rgba(255,255,255,0.01)",padding:"7px 14px",cursor:"pointer",transition:"background .1s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="rgba(0,212,180,0.05)"}
+                      onMouseLeave={e=>e.currentTarget.style.background=pi%2===0?"#0A1520":"rgba(255,255,255,0.01)"}>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div style={{width:22,height:22,borderRadius:5,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,fontFamily:"var(--font-mono)",flexShrink:0}}>{initials(person.name)}</div>
+                        <span style={{fontSize:11,fontWeight:500,whiteSpace:"nowrap",color:isOnLeave(person,todayStr)?"var(--orange)":"var(--text)"}}>{person.name}</span>
+                      </div>
                     </td>
                     {dates.map(d=>{
-                      const ds=fmt(d),hol=isHoliday(ds),leave=!hol?getLeaveForDate(person,ds):null,we=isWeekend(d),isToday=ds===todayStr,wfa=wfaDates.includes(ds);
-                      const barColor=leave?(leave.type==="cubes"?T.amber:T.orange):null;
+                      const ds=fmt(d),hol=isHoliday(ds),we=isWeekend(d),isToday=ds===todayStr,wfa=wfaDates.includes(ds);
+                      const leave=getLeaveForDate(person,ds); // FIX: no longer blocked by holiday
+                      const barColor=leave?(leave.type==="cubes"?"var(--amber)":"var(--orange)"):null;
                       const isStart=leave&&(ds===leave.start||d.getDate()===1);
                       const isEnd=leave&&(ds===leave.end||d.getDate()===getDaysInMonth(d.getFullYear(),d.getMonth()));
-                      return (<td key={ds} style={{padding:"9px 1px",textAlign:"center",background:isToday?"rgba(46,196,182,0.06)":hol?"rgba(230,57,70,0.04)":wfa?"rgba(69,123,157,0.04)":we?"rgba(255,255,255,0.01)":"transparent",position:"relative"}}>
-                        {barColor&&<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:isStart?4:0,right:isEnd?4:0,height:20,background:barColor,opacity:0.75,borderRadius:`${isStart?5:0}px ${isEnd?5:0}px ${isEnd?5:0}px ${isStart?5:0}px`}}/>}
-                      </td>);
+                      return(
+                        <td key={ds} style={{padding:"7px 1px",position:"relative",background:isToday?"rgba(0,212,180,0.04)":hol?"rgba(255,77,94,0.03)":wfa?"rgba(61,142,240,0.03)":we?"rgba(255,255,255,0.005)":"transparent"}}>
+                          {barColor&&<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:isStart?4:0,right:isEnd?4:0,height:16,background:barColor,opacity:hol?0.4:0.8,borderRadius:`${isStart?4:0}px ${isEnd?4:0}px ${isEnd?4:0}px ${isStart?4:0}px`}}/>}
+                        </td>
+                      );
                     })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {hoveredDate&&(
-            <div style={{padding:"9px 18px",background:"rgba(255,255,255,0.03)",borderTop:"1px solid rgba(255,255,255,0.06)",fontSize:12,color:T.secondary,display:"flex",gap:14,flexWrap:"wrap"}}>
-              <span style={{fontWeight:600,color:T.primary}}>{fmtFull(parseDate(hoveredDate))}</span>
-              {isHoliday(hoveredDate)&&<span style={{color:T.red}}>🔴 {isHoliday(hoveredDate).name}</span>}
-              {wfaDates.includes(hoveredDate)&&<span style={{color:T.blue}}>🏠 WFA</span>}
-              {(()=>{const ol=team.filter(p=>isOnLeave(p,hoveredDate));return ol.length>0?<span style={{color:T.orange}}>✈️ {ol.map(p=>p.name).join(", ")}</span>:<span style={{color:T.teal}}>✅ Semua hadir</span>;})()}
-            </div>
-          )}
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      );
-    }
+        {hovered&&(
+          <div style={{padding:"7px 14px",background:"rgba(0,0,0,0.25)",borderTop:"1px solid var(--border)",fontSize:10,color:"var(--muted)",display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontFamily:"var(--font-mono)",color:"var(--text)",fontWeight:500}}>{fmtFull(parseDate(hovered))}</span>
+            {isHoliday(hovered)&&<span style={{color:"var(--red)"}}>⊘ {isHoliday(hovered).name}</span>}
+            {wfaDates.includes(hovered)&&<span style={{color:"var(--blue)"}}>⌂ WFA</span>}
+            {(()=>{const ol=team.filter(p=>isOnLeave(p,hovered));return ol.length>0?<span style={{color:"var(--orange)"}}>✈ {ol.map(p=>p.name).join(", ")}</span>:<span style={{color:"var(--teal)"}}>◉ Semua hadir</span>;})()}
+          </div>
+        )}
+      </div>
+      <div style={{display:"flex",gap:14,flexWrap:"wrap",padding:"2px 2px"}}>
+        {[["var(--red)","Libur Nasional"],["var(--amber)","Cubes"],["var(--orange)","Cuti Personal"],["var(--blue)","WFA"],["var(--teal)","Hari Ini"]].map(([c,l])=>(
+          <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:9,height:9,borderRadius:2,background:c}}/>
+            <span style={{fontSize:10,color:"var(--muted)"}}>{l}</span>
+          </div>
+        ))}
+      </div>
+      {modalPerson&&<PersonModal person={team.find(p=>p.name===modalPerson)} todayStr={todayStr} onClose={()=>setModalPerson(null)}/>}
+    </div>
+  );
+}
 
-    // ─── Calendar ─────────────────────────────────────────────
-    function CalendarView({ year, month, team, wfaDates, todayStr }) {
-      const firstDay=new Date(year,month,1).getDay(),daysInMonth=getDaysInMonth(year,month);
-      const cells=[...Array(firstDay).fill(null),...Array.from({length:daysInMonth},(_,i)=>i+1)];
-      return (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}}>
-          {DAYS_ID.map(d=><div key={d} style={{textAlign:"center",padding:"7px 0",fontSize:11,fontWeight:700,color:T.secondary,letterSpacing:1}}>{d}</div>)}
-          {cells.map((day,i)=>{
-            if(!day) return <div key={`e${i}`}/>;
-            const d=new Date(year,month,day),ds=fmt(d),hol=isHoliday(ds),wfa=wfaDates.includes(ds),we=isWeekend(d),isToday=ds===todayStr,ol=team.filter(p=>isOnLeave(p,ds));
-            return (<div key={ds} style={{background:isToday?"rgba(46,196,182,0.15)":hol?"rgba(230,57,70,0.1)":T.card,borderRadius:10,padding:"9px 7px",minHeight:82,border:isToday?`2px solid ${T.teal}`:"1px solid rgba(255,255,255,0.04)",opacity:we&&!hol?0.5:1}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                <span style={{fontSize:14,fontWeight:isToday?800:600,color:isToday?T.teal:hol?T.red:T.primary}}>{day}</span>
-                {wfa&&<span style={{fontSize:8,background:T.blue,color:"#fff",padding:"1px 4px",borderRadius:3,fontWeight:700}}>WFA</span>}
+/* ── CALENDAR ── */
+function CalendarPage({team,wfaDates,todayStr,today,selectedMonth,setDayModal}){
+  const year=today.getFullYear();
+  const firstDay=new Date(year,selectedMonth,1).getDay();
+  const cells=[...Array(firstDay).fill(null),...Array.from({length:getDaysInMonth(year,selectedMonth)},(_,i)=>i+1)];
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+        {DAYS_ID.map(d=><div key={d} style={{textAlign:"center",padding:"5px 0",fontSize:9,fontWeight:600,color:"var(--muted)",fontFamily:"var(--font-mono)",letterSpacing:".08em"}}>{d}</div>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
+        {cells.map((day,i)=>{
+          if(!day)return<div key={`e${i}`} style={{minHeight:85}}/>;
+          const d=new Date(year,selectedMonth,day),ds=fmt(d),hol=isHoliday(ds),wfa=wfaDates.includes(ds),we=isWeekend(d),isToday=ds===todayStr;
+          const ol=team.filter(p=>isOnLeave(p,ds));
+          return(
+            <div key={ds} onClick={()=>setDayModal(ds)} style={{borderRadius:9,padding:"7px 7px",minHeight:85,cursor:"pointer",background:isToday?"rgba(0,212,180,0.1)":hol?"rgba(255,77,94,0.06)":"var(--bg3)",border:isToday?"1px solid rgba(0,212,180,0.35)":"1px solid var(--border)",opacity:we&&!hol&&ol.length===0?0.35:1,transition:"all .1s"}}
+              onMouseEnter={e=>{e.currentTarget.style.border=`1px solid ${isToday?"rgba(0,212,180,.5)":"var(--border2)"}`;e.currentTarget.style.background=isToday?"rgba(0,212,180,.14)":hol?"rgba(255,77,94,.09)":"rgba(255,255,255,0.03)"}}
+              onMouseLeave={e=>{e.currentTarget.style.border=isToday?"1px solid rgba(0,212,180,.35)":"1px solid var(--border)";e.currentTarget.style.background=isToday?"rgba(0,212,180,.1)":hol?"rgba(255,77,94,.06)":"var(--bg3)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <span style={{fontSize:12,fontWeight:isToday?800:500,color:isToday?"var(--teal)":hol?"var(--red)":"var(--text)",fontFamily:"var(--font-mono)"}}>{day}</span>
+                {wfa&&<span style={{fontSize:7,background:"var(--blue-dim)",color:"var(--blue)",padding:"1px 4px",borderRadius:3,fontWeight:700,fontFamily:"var(--font-mono)"}}>WFA</span>}
               </div>
-              {hol&&<div style={{fontSize:8,color:T.red,marginBottom:3,lineHeight:1.2,fontWeight:600}}>{hol.name}</div>}
-              {ol.slice(0,2).map(p=><div key={p.id} style={{fontSize:9,color:"#fff",background:T.orange,borderRadius:3,padding:"1px 4px",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✈️ {p.name}</div>)}
-              {ol.length>2&&<div style={{fontSize:9,color:T.secondary}}>+{ol.length-2} lagi</div>}
-            </div>);
+              {hol&&<div style={{fontSize:7,color:"var(--red)",marginBottom:3,lineHeight:1.3,fontWeight:600}}>{hol.name}</div>}
+              {ol.slice(0,3).map(p=>{const[bg,fg]=avatarColor(p.name);return(
+                <div key={p.id} style={{display:"flex",alignItems:"center",gap:3,marginBottom:2}}>
+                  <div style={{width:10,height:10,borderRadius:2,background:bg,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:6,color:fg,fontWeight:700,fontFamily:"var(--font-mono)"}}>{initials(p.name)[0]}</div>
+                  <span style={{fontSize:8,color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name.split(" ")[0]}</span>
+                </div>
+              );})}
+              {ol.length>3&&<div style={{fontSize:7,color:"var(--muted)"}}>+{ol.length-3} lagi</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── SUMMARY ── */
+function SummaryPage({team,wfaDates,todayStr,today,selectedMonth}){
+  const year=today.getFullYear();
+  const monthDates=getMonthDates(year,selectedMonth);
+  const workDays=monthDates.filter(d=>!isWeekend(d)&&!isHoliday(fmt(d)));
+  const stats=team.map(p=>{
+    let ld=0;monthDates.forEach(d=>{const ds=fmt(d);if(!isWeekend(d)&&!isHoliday(ds)&&isOnLeave(p,ds))ld++;});
+    const fl=p.leaves.find(l=>{const s=parseDate(l.start),e=parseDate(l.end);return s.getMonth()===selectedMonth||e.getMonth()===selectedMonth;});
+    return{...p,leaveDays:ld,firstLeave:fl};
+  }).sort((a,b)=>b.leaveDays-a.leaveDays);
+  const minAvail=workDays.reduce((mn,d)=>{const n=team.filter(p=>!isOnLeave(p,fmt(d))).length;return n<mn.n?{n,d}:mn},{n:999,d:null});
+  const hols=HOLIDAYS.filter(h=>parseDate(h.date).getMonth()===selectedMonth);
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"1fr 360px",gap:14}}>
+      <div className="glass" style={{borderRadius:13,overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between"}}>
+          <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--teal)",fontWeight:500,letterSpacing:".05em"}}>RINGKASAN — {MONTHS_ID[selectedMonth].toUpperCase()}</span>
+          <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--muted)"}}>{workDays.length} hari kerja</span>
+        </div>
+        <div style={{padding:"6px 0"}}>
+          {stats.map((s,i)=>{
+            const[bg,fg]=avatarColor(s.name);
+            return(
+              <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 18px",borderBottom:i<stats.length-1?"1px solid rgba(255,255,255,0.02)":"none",transition:"background .1s"}}
+                onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--font-mono)",width:14,textAlign:"right",flexShrink:0}}>{i+1}</div>
+                <div style={{width:28,height:28,borderRadius:7,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:9,fontFamily:"var(--font-mono)",flexShrink:0}}>{initials(s.name)}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:600,marginBottom:2}}>{s.name}</div>
+                  {s.firstLeave&&<div style={{fontSize:10,color:"var(--muted)"}}>
+                    {fmtShort(parseDate(s.firstLeave.start))} — {fmtShort(parseDate(s.firstLeave.end))}
+                    {s.firstLeave.note&&<span style={{color:"var(--amber)"}}> · {s.firstLeave.note}</span>}
+                  </div>}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,minWidth:110}}>
+                  <div style={{flex:1,height:3,borderRadius:2,background:"var(--border)"}}>
+                    <div style={{height:"100%",width:`${workDays.length>0?(s.leaveDays/workDays.length)*100:0}%`,background:s.leaveDays>10?"var(--red)":s.leaveDays>5?"var(--amber)":"var(--teal)",borderRadius:2,transition:"width .4s"}}/>
+                  </div>
+                  <span style={{fontSize:11,fontWeight:700,fontFamily:"var(--font-mono)",color:s.leaveDays>10?"var(--red)":s.leaveDays>5?"var(--amber)":"var(--teal)",minWidth:24,textAlign:"right"}}>{s.leaveDays}d</span>
+                </div>
+              </div>
+            );
           })}
         </div>
-      );
-    }
-
-    // ─── Summary ──────────────────────────────────────────────
-    function SummaryView({ team, wfaDates, todayStr, selectedMonth, year }) {
-      const monthDates=getMonthDates(year,selectedMonth);
-      const stats=team.map(p=>{
-        let ld=0; monthDates.forEach(d=>{const ds=fmt(d);if(!isWeekend(d)&&!isHoliday(ds)&&isOnLeave(p,ds))ld++;});
-        const fl=p.leaves.find(l=>{const s=parseDate(l.start),e=parseDate(l.end);return s.getMonth()===selectedMonth||e.getMonth()===selectedMonth;});
-        return {...p,leaveDays:ld,firstLeave:fl};
-      }).sort((a,b)=>b.leaveDays-a.leaveDays);
-      const workDays=monthDates.filter(d=>!isWeekend(d)&&!isHoliday(fmt(d)));
-      const minAvail=workDays.reduce((min,d)=>{const n=team.filter(p=>!isOnLeave(p,fmt(d))).length;return n<min.n?{n,d}:min},{n:999,d:null});
-      return (
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-          <div style={{background:T.card,borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,0.06)"}}>
-            <h3 style={{margin:"0 0 14px",fontSize:14,fontWeight:700,color:T.secondary}}>📊 Ringkasan — {MONTHS_ID[selectedMonth]}</h3>
-            {stats.map((s,i)=>(
-              <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<stats.length-1?"1px solid rgba(255,255,255,0.04)":"none"}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600}}>{s.name}</div>
-                  {s.firstLeave&&<div style={{fontSize:11,color:T.secondary}}>{fmtShort(parseDate(s.firstLeave.start))} — {fmtShort(parseDate(s.firstLeave.end))}{s.firstLeave.note&&<span style={{color:T.amber}}> · {s.firstLeave.note}</span>}</div>}
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{width:Math.max(s.leaveDays*10,0),height:7,borderRadius:4,background:s.leaveDays>10?T.accent:s.leaveDays>5?T.amber:T.teal}}/>
-                  <span style={{fontSize:12,fontWeight:700,minWidth:28,textAlign:"right",color:s.leaveDays>10?T.accent:s.leaveDays>5?T.amber:T.teal}}>{s.leaveDays}d</span>
-                </div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div className="glass" style={{borderRadius:13,padding:18}}>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--amber)",fontWeight:500,letterSpacing:".05em",marginBottom:12}}>KAPASITAS MINIMUM</div>
+          {minAvail.d?<>
+            <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:5}}>
+              <span style={{fontSize:44,fontWeight:800,fontFamily:"var(--font-mono)",color:minAvail.n<=3?"var(--red)":"var(--amber)",lineHeight:1}}>{minAvail.n}</span>
+              <span style={{fontSize:14,color:"var(--muted)"}}>/ {team.length}</span>
+            </div>
+            <div style={{fontSize:10,color:"var(--muted)"}}>{fmtFull(minAvail.d)}</div>
+          </>:<div style={{color:"var(--muted)",fontSize:12}}>Tidak ada data</div>}
+        </div>
+        <div className="glass" style={{borderRadius:13,padding:18,flex:1}}>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--red)",fontWeight:500,letterSpacing:".05em",marginBottom:12}}>LIBUR {MONTHS_ID[selectedMonth].toUpperCase()}</div>
+          {hols.length===0?<div style={{fontSize:11,color:"var(--muted)",fontStyle:"italic"}}>Tidak ada.</div>
+          :<div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {hols.map(h=>(
+              <div key={h.date} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 9px",borderRadius:7,background:"var(--red-dim)",border:"1px solid rgba(255,77,94,.1)"}}>
+                <span style={{fontSize:10}}>{h.name}</span>
+                <span style={{fontSize:9,color:"var(--red)",fontFamily:"var(--font-mono)",fontWeight:600,flexShrink:0,marginLeft:6}}>{fmtShort(parseDate(h.date))}</span>
               </div>
             ))}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <div style={{background:T.card,borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,0.06)"}}>
-              <h3 style={{margin:"0 0 10px",fontSize:14,fontWeight:700,color:T.secondary}}>⚠️ Kapasitas Minimum</h3>
-              {minAvail.d?<><div style={{fontSize:44,fontWeight:800,color:minAvail.n<=3?T.accent:T.amber}}>{minAvail.n}/{team.length}</div><div style={{fontSize:12,color:T.secondary,marginTop:4}}>orang tersedia pada {fmtFull(minAvail.d)}</div></>:<div style={{color:T.secondary}}>Tidak ada data</div>}
-            </div>
-            <div style={{background:T.card,borderRadius:16,padding:22,border:"1px solid rgba(255,255,255,0.06)",flex:1}}>
-              <h3 style={{margin:"0 0 12px",fontSize:14,fontWeight:700,color:T.secondary}}>📋 Libur {MONTHS_ID[selectedMonth]}</h3>
-              {HOLIDAYS.filter(h=>parseDate(h.date).getMonth()===selectedMonth).map(h=>(
-                <div key={h.date} style={{display:"flex",justifyContent:"space-between",padding:"7px 10px",borderRadius:7,background:"rgba(230,57,70,0.07)",borderLeft:`3px solid ${T.red}`,marginBottom:6}}>
-                  <span style={{fontSize:11,fontWeight:500}}>{h.name}</span>
-                  <span style={{fontSize:11,color:T.secondary,fontWeight:600,whiteSpace:"nowrap",marginLeft:8}}>{fmtShort(parseDate(h.date))}</span>
+          </div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── CMS LEAVES ── */
+function CMSLeaves({team,updateData,todayStr}){
+  const[editing,setEditing]=useState(null);
+  const[confirmDel,setConfirmDel]=useState(null);
+  const[toast,setToast]=useState(null);
+  const[search,setSearch]=useState("");
+  function showToast(m,ok=true){setToast({m,ok});setTimeout(()=>setToast(null),2500);}
+  function saveLeave(personId,leave){
+    const next=team.map(p=>{if(p.id!==personId)return p;const ex=p.leaves.find(l=>l.id===leave.id);return{...p,leaves:ex?p.leaves.map(l=>l.id===leave.id?leave:l):[...p.leaves,{...leave,id:Date.now()}]};});
+    updateData({team:next});setEditing(null);showToast("Cuti disimpan ✓");
+  }
+  function deleteLeave(pid,lid){updateData({team:team.map(p=>p.id!==pid?p:{...p,leaves:p.leaves.filter(l=>l.id!==lid)})});setConfirmDel(null);showToast("Cuti dihapus");}
+  const filtered=team.filter(p=>p.name.toLowerCase().includes(search.toLowerCase()));
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <Toast toast={toast}/>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <input className="input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Cari anggota…" style={{maxWidth:260}}/>
+        <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--font-mono)"}}>{filtered.length} anggota</span>
+      </div>
+      {filtered.map(person=>{
+        const[bg,fg]=avatarColor(person.name);
+        return(
+          <div key={person.id} className="glass" style={{borderRadius:13,overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 18px",borderBottom:"1px solid var(--border)",background:"rgba(0,0,0,0.15)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:9}}>
+                <div style={{width:32,height:32,borderRadius:8,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:10,fontFamily:"var(--font-mono)"}}>{initials(person.name)}</div>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13}}>{person.name}</div>
+                  <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>{person.leaves.length} entri cuti</div>
                 </div>
-              ))}
+              </div>
+              <button className="btn btn-teal btn-sm" onClick={()=>setEditing({personId:person.id,isNew:true})}>+ Tambah</button>
+            </div>
+            <div style={{padding:person.leaves.length?10:0}}>
+              {person.leaves.length===0?<div style={{padding:"12px 18px",fontSize:10,color:"var(--muted)",fontStyle:"italic"}}>Belum ada cuti.</div>
+              :person.leaves.map(l=>{
+                const start=parseDate(l.start),end=parseDate(l.end),active=todayStr>=l.start&&todayStr<=l.end;
+                return(
+                  <div key={l.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 11px",borderRadius:8,marginBottom:5,background:active?"rgba(255,122,53,0.06)":"rgba(255,255,255,0.02)",border:`1px solid ${active?"rgba(255,122,53,.2)":"var(--border)"}`,borderLeft:`3px solid ${l.type==="cubes"?"var(--amber)":"var(--orange)"}`}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
+                        {fmtShort(start)} — {fmtShort(end)}
+                        {active&&<span className="tag" style={{background:"var(--orange-dim)",color:"var(--orange)"}}>AKTIF</span>}
+                        <span className="tag" style={{background:l.type==="cubes"?"var(--amber-dim)":"rgba(255,255,255,0.05)",color:l.type==="cubes"?"var(--amber)":"var(--muted)"}}>{l.type==="cubes"?"CUBES":"CUTI"}</span>
+                      </div>
+                      <div style={{fontSize:9,color:"var(--muted)",marginTop:2,fontFamily:"var(--font-mono)"}}>
+                        {workdaysBetween(l.start,l.end)} hari kerja
+                        {l.note&&<span style={{color:"var(--amber)"}}> · {l.note}</span>}
+                      </div>
+                    </div>
+                    <button className="btn-icon" onClick={()=>setEditing({personId:person.id,leave:l})}>✏️</button>
+                    <button className="btn-icon" style={{color:"var(--red)"}} onClick={()=>setConfirmDel({pid:person.id,lid:l.id,label:`cuti ${fmtShort(start)}–${fmtShort(end)}`})}>🗑️</button>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div>
-      );
-    }
+        );
+      })}
+      {editing&&<LeaveModal personId={editing.personId} personName={team.find(p=>p.id===editing.personId)?.name} leave={editing.leave} isNew={editing.isNew} onSave={saveLeave} onClose={()=>setEditing(null)}/>}
+      {confirmDel&&<ConfirmModal label={confirmDel.label} onConfirm={()=>deleteLeave(confirmDel.pid,confirmDel.lid)} onClose={()=>setConfirmDel(null)}/>}
+    </div>
+  );
+}
 
-    // ─── shared components ────────────────────────────────────
-    function StatCard({ icon, label, value, sub, accent }) {
-      return (
-        <div style={{background:T.card,borderRadius:14,padding:"16px 18px",border:"1px solid rgba(255,255,255,0.05)",borderTop:`2px solid ${accent}`}}>
-          <div style={{fontSize:12,color:T.secondary,marginBottom:5}}>{icon} {label}</div>
-          <div style={{fontSize:24,fontWeight:800,color:accent,lineHeight:1}}>{value}</div>
-          <div style={{fontSize:11,color:T.secondary,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</div>
-        </div>
-      );
-    }
-    function Legend({ color, label }) {
-      return (
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:11,height:11,borderRadius:3,background:color}}/>
-          <span style={{fontSize:11,color:T.secondary}}>{label}</span>
-        </div>
-      );
-    }
+/* ── CMS MEMBERS ── */
+function CMSMembers({team,updateData}){
+  const[editing,setEditing]=useState(null);
+  const[confirmDel,setConfirmDel]=useState(null);
+  const[toast,setToast]=useState(null);
+  function showToast(m,ok=true){setToast({m,ok});setTimeout(()=>setToast(null),2500);}
+  function saveMember(member){
+    const ex=team.find(p=>p.id===member.id);
+    updateData({team:ex?team.map(p=>p.id===member.id?{...p,name:member.name}:p):[...team,{id:Date.now(),name:member.name,leaves:[]}]});
+    setEditing(null);showToast("Disimpan ✓");
+  }
+  function deleteMember(id){updateData({team:team.filter(p=>p.id!==id)});setConfirmDel(null);showToast("Dihapus");}
+  return(
+    <div>
+      <Toast toast={toast}/>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+        <button className="btn btn-teal" onClick={()=>setEditing({id:null,name:"",isNew:true})}>+ Tambah Anggota</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(195px,1fr))",gap:9}}>
+        {team.map(p=>{
+          const[bg,fg]=avatarColor(p.name);
+          return(
+            <div key={p.id} className="glass" style={{borderRadius:11,padding:14,display:"flex",alignItems:"center",gap:9}}>
+              <div style={{width:36,height:36,borderRadius:9,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,fontFamily:"var(--font-mono)",flexShrink:0}}>{initials(p.name)}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                <div style={{fontSize:9,color:"var(--muted)",marginTop:2}}>{p.leaves.length} cuti terdaftar</div>
+              </div>
+              <div style={{display:"flex",gap:3}}>
+                <button className="btn-icon" onClick={()=>setEditing({id:p.id,name:p.name})}>✏️</button>
+                <button className="btn-icon" style={{color:"var(--red)"}} onClick={()=>setConfirmDel({id:p.id,name:p.name})}>🗑️</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {editing&&<MemberModal member={editing} onSave={saveMember} onClose={()=>setEditing(null)}/>}
+      {confirmDel&&<ConfirmModal label={confirmDel.name} onConfirm={()=>deleteMember(confirmDel.id)} onClose={()=>setConfirmDel(null)}/>}
+    </div>
+  );
+}
 
-    // ─── style helpers ────────────────────────────────────────
-    const inputStyle = { width:"100%",padding:"9px 12px",borderRadius:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",color:"#F1FAEE",fontSize:13,outline:"none",boxSizing:"border-box",marginTop:5 };
-    const labelStyle = { display:"flex",flexDirection:"column",fontSize:12,color:"#8FA3B8",fontWeight:600 };
-    function btnStyle(bg, color) { return { padding:"8px 16px",borderRadius:8,border:"none",background:bg,color:color||"#0F1923",fontWeight:700,fontSize:13,cursor:"pointer" }; }
-    function iconBtn(color) { return { background:`${color}22`,border:"none",color,width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }; }
+/* ── CMS WFA ── */
+function CMSWfa({wfaDates,updateData,todayStr}){
+  const[newDate,setNewDate]=useState("");
+  const[toast,setToast]=useState(null);
+  function showToast(m,ok=true){setToast({m,ok});setTimeout(()=>setToast(null),2500);}
+  function add(){if(!newDate||wfaDates.includes(newDate))return;updateData({wfaDates:[...wfaDates,newDate].sort()});setNewDate("");showToast("WFA date ditambahkan ✓");}
+  function remove(d){updateData({wfaDates:wfaDates.filter(x=>x!==d)});showToast("Dihapus");}
+  function clearPast(){updateData({wfaDates:wfaDates.filter(d=>d>=todayStr)});showToast("WFA lampau dihapus ✓");}
+  const pastDates=wfaDates.filter(d=>d<todayStr);
+  const futureDates=wfaDates.filter(d=>d>=todayStr);
+  return(
+    <div style={{maxWidth:520}}>
+      <Toast toast={toast}/>
+      <div className="glass" style={{borderRadius:13,padding:20,marginBottom:16}}>
+        <div style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--blue)",fontWeight:500,letterSpacing:".05em",marginBottom:14}}>TAMBAH WFA DATE</div>
+        <div style={{display:"flex",gap:8}}>
+          <input className="input" type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} style={{flex:1}}/>
+          <button className="btn btn-teal" onClick={add}>Tambah</button>
+        </div>
+      </div>
+      {futureDates.length>0&&<div style={{marginBottom:14}}>
+        <div style={{fontFamily:"var(--font-mono)",fontSize:9,color:"var(--muted)",letterSpacing:".06em",marginBottom:7}}>MENDATANG</div>
+        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+          {futureDates.map(d=>(
+            <div key={d} className="glass" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 14px",borderRadius:9,borderLeft:"3px solid var(--blue)"}}>
+              <span style={{fontSize:12,fontWeight:500}}>{fmtFull(parseDate(d))}</span>
+              <button className="btn-icon" style={{color:"var(--red)"}} onClick={()=>remove(d)}>🗑️</button>
+            </div>
+          ))}
+        </div>
+      </div>}
+      {pastDates.length>0&&<div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:9,color:"var(--muted)",letterSpacing:".06em"}}>LAMPAU ({pastDates.length})</div>
+          <button className="btn btn-red btn-sm" onClick={clearPast}>Hapus Semua Lampau</button>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+          {pastDates.map(d=>(
+            <div key={d} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 14px",borderRadius:9,background:"rgba(255,255,255,0.01)",border:"1px solid var(--border)",opacity:.4}}>
+              <span style={{fontSize:11,textDecoration:"line-through",color:"var(--muted)"}}>{fmtFull(parseDate(d))}</span>
+              <button className="btn-icon" style={{color:"var(--red)"}} onClick={()=>remove(d)}>🗑️</button>
+            </div>
+          ))}
+        </div>
+      </div>}
+    </div>
+  );
+}
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+/* ── MODALS ── */
+function Overlay({children,onClose,w=460}){
+  return(
+    <div className="fade-in" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.72)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}} onClick={onClose}>
+      <div style={{background:"var(--bg2)",borderRadius:14,padding:26,width:`min(${w}px,95vw)`,border:"1px solid var(--border2)",boxShadow:"0 28px 70px rgba(0,0,0,0.6)"}} onClick={e=>e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+function PersonModal({person,todayStr,onClose}){
+  if(!person)return null;
+  const[bg,fg]=avatarColor(person.name);
+  const onLeave=isOnLeave(person,todayStr);
+  return(
+    <Overlay onClose={onClose}>
+      <div style={{display:"flex",alignItems:"center",gap:11,marginBottom:18,paddingBottom:14,borderBottom:"1px solid var(--border)"}}>
+        <div style={{width:40,height:40,borderRadius:10,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,fontFamily:"var(--font-mono)"}}>{initials(person.name)}</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:15}}>{person.name}</div>
+          <div style={{fontSize:10,color:onLeave?"var(--orange)":"var(--teal)",marginTop:2,display:"flex",alignItems:"center",gap:4}}>
+            <span style={{width:5,height:5,borderRadius:50,background:onLeave?"var(--orange)":"var(--teal)",display:"inline-block"}}/>
+            {onLeave?"Sedang cuti":"Tersedia hari ini"}
+          </div>
+        </div>
+        <button className="btn-icon" onClick={onClose}>✕</button>
+      </div>
+      {person.leaves.length===0?<p style={{color:"var(--muted)",fontSize:12,textAlign:"center",padding:"14px 0"}}>Tidak ada jadwal cuti.</p>
+      :<div style={{display:"flex",flexDirection:"column",gap:7}}>
+        {person.leaves.map(l=>{
+          const s=parseDate(l.start),e=parseDate(l.end),active=todayStr>=l.start&&todayStr<=l.end;
+          return(
+            <div key={l.id} style={{padding:"11px 12px",borderRadius:9,background:"rgba(255,255,255,0.03)",borderLeft:`3px solid ${l.type==="cubes"?"var(--amber)":"var(--orange)"}`,border:`1px solid ${active?"rgba(255,122,53,.2)":"var(--border)"}`}}>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:3,display:"flex",gap:5,alignItems:"center"}}>
+                {fmtShort(s)} — {fmtShort(e)}
+                {active&&<span className="tag" style={{background:"var(--orange-dim)",color:"var(--orange)"}}>AKTIF</span>}
+              </div>
+              <div style={{color:"var(--muted)",fontSize:10,fontFamily:"var(--font-mono)"}}>
+                {workdaysBetween(l.start,l.end)} hari kerja · {l.type==="cubes"?"Cubes":"Cuti Personal"}
+                {l.note&&<span style={{color:"var(--amber)"}}> · {l.note}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>}
+    </Overlay>
+  );
+}
+function DayModal({date,team,wfaDates,onClose}){
+  const hol=isHoliday(date),wfa=wfaDates.includes(date);
+  const ol=team.filter(p=>isOnLeave(p,date));
+  const avail=team.filter(p=>!isOnLeave(p,date));
+  const d=parseDate(date);
+  return(
+    <Overlay onClose={onClose} w={400}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14,paddingBottom:12,borderBottom:"1px solid var(--border)"}}>
+        <div>
+          <div style={{fontFamily:"var(--font-mono)",fontSize:26,fontWeight:700,color:"var(--teal)",lineHeight:1}}>{d.getDate()}</div>
+          <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>{fmtFull(d)}</div>
+          <div style={{display:"flex",gap:5,marginTop:6,flexWrap:"wrap"}}>
+            {hol&&<span className="tag" style={{background:"var(--red-dim)",color:"var(--red)"}}>{hol.name}</span>}
+            {wfa&&<span className="tag" style={{background:"var(--blue-dim)",color:"var(--blue)"}}>WFA</span>}
+          </div>
+        </div>
+        <button className="btn-icon" onClick={onClose}>✕</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        {[{title:"HADIR",color:"var(--teal)",people:avail},{title:"CUTI",color:"var(--orange)",people:ol}].map(({title,color,people})=>(
+          <div key={title}>
+            <div style={{fontSize:9,color,fontFamily:"var(--font-mono)",fontWeight:500,letterSpacing:".06em",marginBottom:8}}>{title} ({people.length})</div>
+            {people.length===0?<div style={{fontSize:10,color:"var(--muted)",fontStyle:"italic"}}>—</div>
+            :people.map(p=>{const[bg,fg]=avatarColor(p.name);return(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0"}}>
+                <div style={{width:20,height:20,borderRadius:4,background:bg,color:fg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:700,fontFamily:"var(--font-mono)",flexShrink:0}}>{initials(p.name)}</div>
+                <span style={{fontSize:11}}>{p.name}</span>
+              </div>
+            );})}
+          </div>
+        ))}
+      </div>
+    </Overlay>
+  );
+}
+function LeaveModal({personId,personName,leave,isNew,onSave,onClose}){
+  const[form,setForm]=useState({id:leave?.id||Date.now(),start:leave?.start||"",end:leave?.end||"",type:leave?.type||"cuti",note:leave?.note||""});
+  const[err,setErr]=useState("");
+  function save(){if(!form.start||!form.end){setErr("Tanggal harus diisi.");return;}if(form.start>form.end){setErr("Tanggal selesai harus setelah mulai.");return;}onSave(personId,form);}
+  const wdays=form.start&&form.end&&form.start<=form.end?workdaysBetween(form.start,form.end):0;
+  return(
+    <Overlay onClose={onClose}>
+      <div style={{fontFamily:"var(--font-mono)",fontSize:16,fontWeight:700,marginBottom:3}}>{isNew?"Tambah Cuti":"Edit Cuti"}</div>
+      <div style={{fontSize:11,color:"var(--muted)",marginBottom:18}}>{personName}</div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <label style={{display:"flex",flexDirection:"column",gap:4,fontSize:10,color:"var(--muted)",fontWeight:500}}>MULAI<input className="input" type="date" value={form.start} onChange={e=>setForm({...form,start:e.target.value})}/></label>
+          <label style={{display:"flex",flexDirection:"column",gap:4,fontSize:10,color:"var(--muted)",fontWeight:500}}>SELESAI<input className="input" type="date" value={form.end} onChange={e=>setForm({...form,end:e.target.value})}/></label>
+        </div>
+        <label style={{display:"flex",flexDirection:"column",gap:4,fontSize:10,color:"var(--muted)",fontWeight:500}}>JENIS
+          <select className="input" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
+            <option value="cuti">Cuti Personal</option>
+            <option value="cubes">Cuti Besar (Cubes)</option>
+          </select>
+        </label>
+        <label style={{display:"flex",flexDirection:"column",gap:4,fontSize:10,color:"var(--muted)",fontWeight:500}}>CATATAN
+          <input className="input" type="text" value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="opsional"/>
+        </label>
+        {wdays>0&&<div style={{fontSize:10,color:"var(--teal)",background:"var(--teal-dim)",padding:"7px 11px",borderRadius:7,fontFamily:"var(--font-mono)"}}>
+          ◉ {wdays} hari kerja (tidak termasuk libur & weekend)
+        </div>}
+        {err&&<div style={{fontSize:10,color:"var(--red)",background:"var(--red-dim)",padding:"7px 11px",borderRadius:7}}>{err}</div>}
+      </div>
+      <div style={{display:"flex",gap:7,marginTop:18,justifyContent:"flex-end"}}>
+        <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+        <button className="btn btn-teal" onClick={save}>💾 Simpan</button>
+      </div>
+    </Overlay>
+  );
+}
+function MemberModal({member,onSave,onClose}){
+  const[name,setName]=useState(member.name||"");
+  return(
+    <Overlay onClose={onClose} w={360}>
+      <div style={{fontFamily:"var(--font-mono)",fontSize:16,fontWeight:700,marginBottom:18}}>{member.isNew?"Tambah Anggota":"Edit Nama"}</div>
+      <label style={{display:"flex",flexDirection:"column",gap:4,fontSize:10,color:"var(--muted)",fontWeight:500}}>NAMA
+        <input className="input" type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Bu Tamie" autoFocus/>
+      </label>
+      <div style={{display:"flex",gap:7,marginTop:18,justifyContent:"flex-end"}}>
+        <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+        <button className="btn btn-teal" onClick={()=>{if(name.trim())onSave({id:member.id,name:name.trim()})}}>💾 Simpan</button>
+      </div>
+    </Overlay>
+  );
+}
+function ConfirmModal({label,onConfirm,onClose}){
+  return(
+    <Overlay onClose={onClose} w={340}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:40,marginBottom:10}}>⚠️</div>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:7}}>Hapus?</div>
+        <div style={{color:"var(--muted)",fontSize:11,marginBottom:22,lineHeight:1.7}}>Yakin hapus <strong style={{color:"var(--text)"}}>{label}</strong>?<br/>Tidak bisa dibatalkan.</div>
+        <div style={{display:"flex",gap:7,justifyContent:"center"}}>
+          <button className="btn btn-ghost" onClick={onClose}>Batal</button>
+          <button className="btn btn-red" onClick={onConfirm}>Hapus</button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+function Toast({toast}){
+  if(!toast)return null;
+  return(
+    <div className="fade-in" style={{position:"fixed",bottom:22,right:22,zIndex:999,background:toast.ok?"var(--teal)":"var(--red)",color:"#000",padding:"9px 16px",borderRadius:9,fontWeight:700,fontSize:11,boxShadow:"0 8px 28px rgba(0,0,0,0.5)",fontFamily:"var(--font-mono)"}}>
+      {toast.m}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
 </body>
 </html>
